@@ -10,7 +10,7 @@ const api = useApi()
 const slug = String(route.params.slug)
 
 const link = ref<LinkMeta | null>(null)
-const draft = reactive({ targetUrl: '', siteName: '', title: '', description: '', image: '', imageStyle: 'large' as 'large' | 'small', extra: {} as PreviewExtra })
+const draft = reactive({ targetUrl: '', siteName: '', title: '', description: '', image: '', imageStyle: 'large' as 'large' | 'small', extra: {} as PreviewExtra, platforms: {} as PlatformOverrides })
 const theme = ref<'light' | 'dark'>('light')
 const error = ref('')
 const notice = ref('')
@@ -27,6 +27,14 @@ interface TgPreview { state: 'ready' | 'pending' | 'empty' | 'none'; url?: strin
 
 const tgReady = ref(false)
 const tgBot = ref(false)
+const fbReady = ref(false)
+const fbPage = ref(false)
+const fbAppId = ref('')
+const app = ref<PreviewApp>('telegram')
+const overrideTab = ref<Platform>('telegram')
+const fbPanel = ref<{ refresh: () => Promise<boolean> } | null>(null)
+const waImageBytes = ref(0)
+const notice2 = ref('')
 const { options: sendOpts, template: sendTemplate } = useSendSettings()
 const sender = ref<{ updateAll: () => Promise<boolean>; count: number } | null>(null)
 const autoRefresh = ref(true)
@@ -39,9 +47,12 @@ const tgCached = ref<TgPreview | null>(null)
 
 onMounted(async () => {
   try {
-    const h = await $fetch<{ telegram: boolean; telegramBot: boolean }>('/api/health')
+    const h = await $fetch<{ telegram: boolean; telegramBot: boolean; facebook: boolean; facebookPage: boolean; facebookAppId: string }>('/api/health')
     tgReady.value = !!h.telegram
     tgBot.value = !!h.telegramBot
+    fbReady.value = !!h.facebook
+    fbPage.value = !!h.facebookPage
+    fbAppId.value = h.facebookAppId || ''
   } catch {}
 })
 
@@ -63,7 +74,7 @@ watch(syncDraft, async (on) => {
   if (!on || !link.value?.postSlug || link.value.syncWithPost) return
   try {
     const p = await api<Post>(`/api/posts/${link.value.postSlug}`)
-    Object.assign(draft, { siteName: p.siteName, title: p.title, description: p.excerpt, image: p.cover, imageStyle: p.imageStyle, extra: { ...(p.extra || {}) } })
+    Object.assign(draft, { siteName: p.siteName, title: p.title, description: p.excerpt, image: p.cover, imageStyle: p.imageStyle, extra: { ...(p.extra || {}) }, platforms: JSON.parse(JSON.stringify(p.platforms || {})) })
   } catch (e) { error.value = errMsg(e) }
 })
 
@@ -80,6 +91,7 @@ const FIELDS = ['targetUrl', 'siteName', 'title', 'description', 'image', 'image
 function fill(l: LinkMeta) {
   for (const k of FIELDS) (draft as any)[k] = l[k]
   draft.extra = { ...(l.extra || {}) }
+  draft.platforms = JSON.parse(JSON.stringify(l.platforms || {}))
   syncDraft.value = !!l.syncWithPost
 }
 
@@ -93,8 +105,22 @@ onMounted(load)
 
 const sameJson = (a: unknown, b: unknown) => JSON.stringify(a || {}) === JSON.stringify(b || {})
 const dirty = computed(() => !!link.value && (
-  FIELDS.some((k) => (draft as any)[k] !== link.value![k]) || syncDraft.value !== !!link.value.syncWithPost || !sameJson(draft.extra, link.value.extra)
+  FIELDS.some((k) => (draft as any)[k] !== link.value![k]) || syncDraft.value !== !!link.value.syncWithPost || !sameJson(draft.extra, link.value.extra) || !sameJson(draft.platforms, link.value.platforms)
 ))
+
+/** What the selected app will show (its overrides applied) */
+const view = computed(() => mergeOverride(
+  { siteName: draft.siteName, title: draft.title, description: draft.description, image: draft.image },
+  draft.platforms[overrideKey(app.value)],
+))
+const mockPlain = computed(() => plainMessage(mockText.value))
+watch(app, (a) => { overrideTab.value = overrideKey(a) })
+
+function useWhatsAppImage(url: string) {
+  draft.platforms = { ...draft.platforms, whatsapp: { ...(draft.platforms.whatsapp || {}), image: url } }
+  app.value = 'whatsapp'
+  notice2.value = 'WhatsApp now has its own smaller image. Click Save to publish it.'
+}
 
 const mockText = computed(() => renderMessage(sendTemplate.value, { url: currentShare.value, title: draft.title, description: draft.description }, sendOpts.value.parseMode === 'html'))
 const currentShare = computed(() => (link.value ? shareUrl(link.value) : ''))
@@ -111,13 +137,15 @@ async function save() {
     notice.value = res.previewChanged
       ? `Saved as version ${res.version}.` + (tgReady.value && autoRefresh.value ? ' Updating Telegram…' : ` New link with the latest preview: ${shareUrl(res)}`)
       : 'Saved.'
-    if (res.previewChanged && autoRefresh.value && (tgReady.value || sender.value?.count)) {
+    if (res.previewChanged && autoRefresh.value && (tgReady.value || fbReady.value || sender.value?.count)) {
       saving.value = false
       const okRefresh = tgReady.value ? await refreshTelegram() : true
       const okSent = sender.value?.count ? await sender.value.updateAll() : true
-      notice.value = okRefresh && okSent
-        ? `Saved as version ${res.version}. Telegram now shows the latest preview${sender.value?.count ? ', and your sent messages were updated' : ''}.`
-        : `Saved as version ${res.version}. Some Telegram updates didn't finish. See the details on the right.`
+      const okFb = fbReady.value ? await fbPanel.value?.refresh() !== false : true
+      const done = [tgReady.value && 'Telegram', fbReady.value && 'Facebook & Messenger'].filter(Boolean).join(' and ')
+      notice.value = okRefresh && okSent && okFb
+        ? `Saved as version ${res.version}. ${done || 'Telegram'} now show${done.includes(' and ') ? '' : 's'} the latest preview${sender.value?.count ? ', and your sent messages were updated' : ''}.`
+        : `Saved as version ${res.version}. Some updates didn't finish. See the details on the right.`
     }
   } catch (e) { error.value = errMsg(e) }
   finally { saving.value = false }
@@ -212,7 +240,8 @@ const imageWarning = computed(() => {
           <TestImagePicker @pick="draft.image = $event" />
         </div>
         <ImageUpload @uploaded="draft.image = $event" />
-        <small v-if="imageWarning" class="hint" :class="{ warn: imageWarning.includes('Telegram') || imageWarning.includes('not') }">{{ imageWarning }}</small>
+        <small v-if="imageWarning && imageInfo?.error" class="hint warn">{{ imageWarning }}</small>
+        <ImageCheck :url="draft.image" />
       </div>
 
       <div class="field">
@@ -223,6 +252,10 @@ const imageWarning = computed(() => {
         </div>
       </div>
 
+      <PlatformOverridesForm
+        v-model="draft.platforms" v-model:tab="overrideTab"
+        :base="{ siteName: draft.siteName, title: draft.title, description: draft.description, image: draft.image }"
+      />
       <PreviewExtras v-model="draft.extra" :image-size="imageInfo && !imageInfo.error ? imageInfo : null" />
       </fieldset>
 
@@ -232,7 +265,8 @@ const imageWarning = computed(() => {
         <span class="grow" />
         <button class="btn danger ghost" @click="remove">Delete</button>
       </div>
-      <label v-if="tgReady || tgBot" class="check"><input v-model="autoRefresh" type="checkbox" /> Update Telegram automatically after saving (refresh previews + edit sent messages)</label>
+      <label v-if="tgReady || tgBot || fbReady" class="check"><input v-model="autoRefresh" type="checkbox" /> Update apps automatically after saving (refresh Telegram &amp; Facebook, edit sent messages)</label>
+      <p v-if="notice2 && dirty" class="notice">{{ notice2 }}</p>
       <p v-if="notice" class="notice">{{ notice }}</p>
       <p v-if="error" class="error">{{ error }}</p>
     </section>
@@ -241,28 +275,52 @@ const imageWarning = computed(() => {
     <section class="side">
       <div class="card">
         <div class="row between">
-          <h2>Telegram preview <span v-if="dirty" class="pill warn">unsaved</span></h2>
+          <h2>Preview <span v-if="dirty" class="pill warn">unsaved</span></h2>
           <div class="seg sm">
             <button :class="{ on: theme === 'light' }" @click="theme = 'light'">Light</button>
             <button :class="{ on: theme === 'dark' }" @click="theme = 'dark'">Dark</button>
           </div>
         </div>
+        <div class="seg sm apptabs">
+          <button v-for="a in PREVIEW_APPS" :key="a.id" :class="{ on: app === a.id }" @click="app = a.id">
+            {{ a.label }}<span v-if="draft.platforms[overrideKey(a.id)]" title="Has its own text or image"> •</span>
+          </button>
+        </div>
         <TelegramPreview
+          v-show="app === 'telegram'"
           :theme="theme" :url="currentShare"
-          :site-name="draft.siteName" :title="draft.title" :description="draft.description"
-          :image="draft.image" :image-style="mockImageStyle(sendOpts.size, draft.imageStyle)"
+          :site-name="view.siteName" :title="view.title" :description="view.description"
+          :image="view.image" :image-style="mockImageStyle(sendOpts.size, draft.imageStyle)"
           :text="mockText" :html="sendOpts.parseMode === 'html'" :position="sendOpts.position" :no-preview="sendOpts.disablePreview"
           :video="!!draft.extra.videoUrl" :duration="draft.extra.videoDuration" :audio="!!draft.extra.audioUrl"
           @image-info="imageInfo = $event"
         />
-        <p class="muted small">This is a close copy of Telegram's layout. Telegram makes the final choice, for example it may show a large image as a small thumbnail.</p>
+        <FacebookPreview v-if="app === 'facebook'" :theme="theme" :url="currentShare" :title="view.title" :description="view.description" :image="view.image" :text="mockPlain.replace(currentShare, '').trim()" />
+        <MessengerPreview v-if="app === 'messenger'" :theme="theme" :url="currentShare" :title="view.title" :description="view.description" :image="view.image" :text="mockPlain" />
+        <WhatsAppPreview v-if="app === 'whatsapp'" :theme="theme" :url="currentShare" :title="view.title" :description="view.description" :image="view.image" :text="mockPlain" :image-bytes="waImageBytes" />
+        <p class="muted small">A close copy of each app's layout. The apps make the final choice, for example showing a large image as a small thumbnail.</p>
         <TelegramSend
+          v-show="app === 'telegram'"
           ref="sender" v-model:options="sendOpts" v-model:template="sendTemplate"
           :owner="`link:${link.slug}`" :latest-url="currentShare" :account="tgReady" :bot="tgBot" :dirty="dirty"
         />
       </div>
 
-      <div class="card">
+      <div v-show="app === 'facebook' || app === 'messenger'" class="card">
+        <FacebookPanel
+          ref="fbPanel" :primary-url="currentShare" :urls="refreshUrls" :owner="`link:${link.slug}`" :template="sendTemplate"
+          :dirty="dirty" :connected="fbReady" :page-connected="fbPage" :app-id="fbAppId" :theme="theme"
+        />
+      </div>
+
+      <div v-show="app === 'whatsapp'" class="card">
+        <WhatsAppPanel
+          :primary-url="currentShare" :image="view.image" :text="mockPlain" :has-override-image="!!draft.platforms.whatsapp?.image" :locked-to="syncDraft ? link.postSlug : undefined"
+          @use-image="useWhatsAppImage" @image-bytes="waImageBytes = $event"
+        />
+      </div>
+
+      <div v-show="app === 'telegram'" class="card">
         <h2>Update in Telegram</h2>
         <p class="muted small">Telegram saves a link's preview the first time anyone posts it. Saving here changes what your server sends, but Telegram keeps the old preview until you do one of these:</p>
 

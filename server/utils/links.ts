@@ -15,6 +15,8 @@ export interface LinkMeta {
   version: number
   /** Extra Open Graph / Telegram tags (type, author, video, …) */
   extra?: PreviewExtra
+  /** Different title/description/image per app (Telegram, Facebook & Messenger, WhatsApp) */
+  platforms?: PlatformOverrides
   /** Set when the link points at one of our posts */
   postSlug?: string
   /** When true, the link always copies its preview from the post (updated whenever the post is saved) */
@@ -98,18 +100,22 @@ export function cleanFields(body: any, partial = false) {
   if (body.description !== undefined) out.description = str(body.description, 2000)
   if (body.imageStyle !== undefined) out.imageStyle = body.imageStyle === 'small' ? 'small' : 'large'
   if (body.extra !== undefined) out.extra = cleanExtra(body.extra)
+  if (body.platforms !== undefined) out.platforms = cleanOverrides(body.platforms)
   return out
 }
 
 export const PREVIEW_FIELDS = ['siteName', 'title', 'description', 'image', 'imageStyle'] as const
 
-export function previewFromPost(post: Post): Pick<LinkMeta, (typeof PREVIEW_FIELDS)[number] | 'extra'> {
-  return { siteName: post.siteName, title: post.title, description: post.excerpt, image: post.cover, imageStyle: post.imageStyle, extra: cleanExtra({ author: post.author, ...post.extra }) }
+export function previewFromPost(post: Post): Pick<LinkMeta, (typeof PREVIEW_FIELDS)[number] | 'extra' | 'platforms'> {
+  return {
+    siteName: post.siteName, title: post.title, description: post.excerpt, image: post.cover, imageStyle: post.imageStyle,
+    extra: cleanExtra({ author: post.author, ...post.extra }), platforms: post.platforms || {},
+  }
 }
 
 /** True when anything Telegram would show is different */
 export function linkPreviewDiffers(a: LinkMeta, b: LinkMeta) {
-  return PREVIEW_FIELDS.some((k) => a[k] !== b[k]) || !sameExtra(a.extra, b.extra)
+  return PREVIEW_FIELDS.some((k) => a[k] !== b[k]) || !sameExtra(a.extra, b.extra) || !sameOverrides(a.platforms, b.platforms)
 }
 
 /** Copies a post's preview into every share link that follows it. Returns the links whose preview changed. */
@@ -129,7 +135,7 @@ export async function syncLinksForPost(post: Post) {
 }
 
 /** Finds our own link or post behind a URL on this site, so we know what Telegram *should* show. */
-export async function expectedPreviewFor(url: string, origin: string) {
+export async function expectedPreviewFor(url: string, origin: string, platform?: Platform) {
   let u: URL
   try { u = new URL(url) } catch { return null }
   if (u.origin !== origin) return null
@@ -137,10 +143,10 @@ export async function expectedPreviewFor(url: string, origin: string) {
   if (!m) return null
   if (m[1] === 's') {
     const l = await getLink(m[2])
-    return l ? { siteName: l.siteName, title: l.title, description: l.description, image: l.image } : null
+    return l ? applyOverride({ siteName: l.siteName, title: l.title, description: l.description, image: l.image }, platform && l.platforms?.[platform]) : null
   }
   const p = await getPost(m[2])
-  return p ? { siteName: p.siteName, title: p.title, description: p.excerpt, image: p.cover } : null
+  return p ? applyOverride({ siteName: p.siteName, title: p.title, description: p.excerpt, image: p.cover }, platform && p.platforms?.[platform]) : null
 }
 
 export function escapeHtml(s: string) {

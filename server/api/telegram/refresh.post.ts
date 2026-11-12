@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
   return await withTelegram(async (client) => {
     const results = []
     for (const url of [...new Set(urls)]) {
-      const expected = verify ? await expectedPreviewFor(url, origin) : null
+      const expected = verify ? await expectedPreviewFor(url, origin, 'telegram') : null
       let r = await refreshWithWebpageBot(client, url, { withContent: !!body.withContent })
       let diffs = expected ? comparePreview(r.preview, expected) : []
       let retried = false

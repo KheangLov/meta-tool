@@ -75,7 +75,7 @@ function guessVideoType(u: string) {
 /** Builds every <meta>/<title> tag for a share link or post page. */
 export function renderMetaTags(p: {
   url: string; siteName: string; title: string; description: string; image: string
-  imageStyle: 'large' | 'small'; extra?: PreviewExtra; defaultType?: string
+  imageStyle: 'large' | 'small'; extra?: PreviewExtra; defaultType?: string; fbAppId?: string
 }) {
   const e = escapeHtml
   const x = p.extra || {}
@@ -89,6 +89,7 @@ export function renderMetaTags(p: {
 
   return [
     `<title>${e(p.title)}</title>`,
+    tag('fb:app_id', p.fbAppId),
     tag('description', p.description, 'name'),
     tag('author', x.author, 'name'),
     tag('og:type', type),

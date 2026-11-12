@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   if (!before) throw createError({ statusCode: 404, statusMessage: 'Post not found' })
   const fields = cleanPost((await readBody(event)) || {})
   const candidate = { ...before, ...fields }
-  const previewChanged = POST_PREVIEW_FIELDS.some((k) => candidate[k] !== before[k]) || !sameExtra(candidate.extra, before.extra)
+  const previewChanged = POST_PREVIEW_FIELDS.some((k) => candidate[k] !== before[k]) || !sameExtra(candidate.extra, before.extra) || !sameOverrides(candidate.platforms, before.platforms)
   if (previewChanged) fields.version = (before.version || 1) + 1
   const post = await savePost(before.slug, fields, before)
   const syncedLinks = previewChanged ? await syncLinksForPost(post) : []

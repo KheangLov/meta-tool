@@ -10,7 +10,8 @@ export default defineEventHandler(async (event) => {
   const owner = String(body.owner || '')
   const target = await latestTarget(owner, getRequestURL(event).origin)
   const list = await listSent(owner)
-  const todo = list.filter((r) => !body.ids || body.ids.includes(r.id))
+  // Facebook doesn't let apps change the link card of a published post, so only Telegram messages are edited
+  const todo = list.filter((r) => r.via !== 'fbpage' && (!body.ids || body.ids.includes(r.id)))
 
   const run = async (client?: any) => {
     for (const rec of todo) {

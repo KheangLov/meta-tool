@@ -115,3 +115,4 @@ fieldset.plain:disabled .input, fieldset.plain:disabled .seg { opacity: .6; }
 .syncbox p { margin: 4px 0 0; }
 .linked { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; display: grid; gap: 4px; }
 .linkedrow { display: flex; gap: 8px; align-items: center; }
+.apptabs { margin: 0 0 10px; flex-wrap: wrap; }

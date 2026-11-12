@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
 
   const ua = getHeader(event, 'user-agent') || ''
   const query = getQuery(event)
-  const wantsHtml = BOT_RE.test(ua) || query.preview !== undefined
+  const wantsHtml = BOT_RE.test(ua) || query.preview !== undefined || query.as !== undefined
 
   // Never let Vercel's CDN cache this: bots and people get different responses from the same URL
   setHeader(event, 'cache-control', 'no-store, max-age=0')
@@ -21,7 +21,14 @@ export default defineEventHandler(async (event) => {
   const reqUrl = getRequestURL(event)
   const shareUrl = `${reqUrl.origin}/s/${link.slug}${query.v ? `?v=${encodeURIComponent(String(query.v))}` : ''}`
   const e = escapeHtml
-  const tags = [`<meta charset="utf-8">`, ...renderMetaTags({ ...link, url: shareUrl })].join('\n    ')
+  // Each app's crawler gets its own overrides (?as=telegram|facebook|whatsapp to preview one in a browser)
+  const platform = parsePlatform(query.as) || platformFromUA(ua)
+  const view = applyOverride(link, platform ? link.platforms?.[platform] : undefined)
+  const extra = view.imageOverridden ? { ...link.extra, imageWidth: undefined, imageHeight: undefined, imageAlt: undefined } : link.extra
+  const tags = [
+    `<meta charset="utf-8">`,
+    ...renderMetaTags({ ...view, extra, url: shareUrl, fbAppId: String(useRuntimeConfig(event).facebookAppId || '') || undefined }),
+  ].join('\n    ')
 
   setHeader(event, 'content-type', 'text/html; charset=utf-8')
   return `<!doctype html>
@@ -30,8 +37,8 @@ export default defineEventHandler(async (event) => {
     ${tags}
   </head>
   <body style="font-family:system-ui,sans-serif;max-width:640px;margin:40px auto;padding:0 16px">
-    <h1 style="font-size:20px">${e(link.title)}</h1>
-    <p>${e(link.description)}</p>
+    <h1 style="font-size:20px">${e(view.title)}</h1>
+    <p>${e(view.description)}</p>
     <p><a href="${e(link.targetUrl)}">Continue to ${e(link.targetUrl)}</a></p>
   </body>
 </html>`

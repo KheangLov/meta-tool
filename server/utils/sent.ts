@@ -20,7 +20,9 @@ export interface SentRecord {
   id: string
   /** 'link:<slug>' or 'post:<slug>' */
   owner: string
-  via: 'account' | 'bot'
+  via: 'account' | 'bot' | 'fbpage'
+  /** Facebook post id (for via = fbpage) */
+  externalId?: string
   /** what the user typed: 'me', '@channel', or a numeric chat id */
   chat: string
   chatId: string
@@ -34,7 +36,7 @@ export interface SentRecord {
   messageLink?: string
   sentAt: string
   updatedAt?: string
-  lastStatus?: 'sent' | 'updated' | 'unchanged' | 'error'
+  lastStatus?: 'sent' | 'updated' | 'unchanged' | 'error' | 'unsupported'
   lastError?: string
 }
 

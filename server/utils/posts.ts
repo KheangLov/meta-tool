@@ -11,6 +11,8 @@ export interface Post {
   author: string
   /** Extra Open Graph / Telegram tags */
   extra?: PreviewExtra
+  /** Different title/description/image per app */
+  platforms?: PlatformOverrides
   /** Bumped when anything in the preview changes; used as ?v= on the post URL */
   version?: number
   createdAt: string
@@ -41,6 +43,7 @@ export function cleanPost(body: any) {
   if (body.author !== undefined) out.author = str(body.author, 200)
   if (body.imageStyle !== undefined) out.imageStyle = body.imageStyle === 'small' ? 'small' : 'large'
   if (body.extra !== undefined) out.extra = cleanExtra(body.extra)
+  if (body.platforms !== undefined) out.platforms = cleanOverrides(body.platforms)
   if (body.cover !== undefined) {
     const c = str(body.cover, 2000)
     if (c && !isHttpUrl(c)) throw createError({ statusCode: 400, statusMessage: 'Cover image must be a full http(s) URL' })

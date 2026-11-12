@@ -31,6 +31,7 @@ export interface LinkMeta {
   postSlug?: string
   syncWithPost?: boolean
   extra?: PreviewExtra
+  platforms?: PlatformOverrides
   createdAt: string
   updatedAt: string
 }
@@ -50,10 +51,16 @@ export interface Post {
   imageStyle: 'large' | 'small'
   author: string
   extra?: PreviewExtra
+  platforms?: PlatformOverrides
   version?: number
   createdAt: string
   updatedAt: string
 }
+
+/** Same shapes as server/utils/platforms.ts */
+export type Platform = 'telegram' | 'facebook' | 'whatsapp'
+export interface PlatformOverride { siteName?: string; title?: string; description?: string; image?: string }
+export type PlatformOverrides = Partial<Record<Platform, PlatformOverride>>
 
 /** Same shape as server/utils/preview.ts */
 export interface PreviewExtra {
@@ -102,3 +109,17 @@ export function renderMessage(template: string, t: { url: string; title: string;
 export function mockImageStyle(size: SendOptions['size'], own: 'large' | 'small') {
   return size === 'auto' ? own : size
 }
+
+/** Same rule as the server: an app's override wins, empty fields fall back to the main value */
+export function mergeOverride(base: { siteName: string; title: string; description: string; image: string }, o?: PlatformOverride) {
+  return { siteName: o?.siteName || base.siteName, title: o?.title || base.title, description: o?.description || base.description, image: o?.image || base.image }
+}
+
+export type PreviewApp = 'telegram' | 'facebook' | 'messenger' | 'whatsapp'
+export const PREVIEW_APPS: { id: PreviewApp; label: string }[] = [
+  { id: 'telegram', label: 'Telegram' },
+  { id: 'facebook', label: 'Facebook' },
+  { id: 'messenger', label: 'Messenger' },
+  { id: 'whatsapp', label: 'WhatsApp' },
+]
+export const overrideKey = (app: PreviewApp): Platform => (app === 'messenger' ? 'facebook' : app)

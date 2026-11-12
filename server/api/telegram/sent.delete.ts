@@ -7,7 +7,8 @@ export default defineEventHandler(async (event) => {
   const rec = list.find((r) => r.id === q.id)
   if (!rec) throw createError({ statusCode: 404, statusMessage: 'Message not found' })
   if (q.deleteMessage) {
-    if (rec.via === 'bot') await deleteViaBot(rec)
+    if (rec.via === 'fbpage') await facebookPageDelete(rec.externalId!)
+    else if (rec.via === 'bot') await deleteViaBot(rec)
     else await withTelegram((client) => deleteViaAccount(client, rec))
   }
   await saveSent(owner, list.filter((r) => r.id !== rec.id))

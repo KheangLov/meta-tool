@@ -25,6 +25,12 @@ export default defineNuxtConfig({
     telegramSession: '',
     // Optional bot (from @BotFather) for posting to channels/groups
     telegramBotToken: '',
+    // Facebook (see README → "Connect Facebook")
+    facebookAppId: '',
+    facebookAppSecret: '',
+    facebookAccessToken: '',
+    facebookPageId: '',
+    facebookPageToken: '',
   },
 
   nitro: {

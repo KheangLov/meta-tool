@@ -6,6 +6,9 @@ export default defineEventHandler((event) => {
     adminTokenSet: !!useRuntimeConfig(event).adminToken,
     telegram: telegramConfigured(),
     telegramBot: botConfigured(),
+    facebook: facebookConfigured(),
+    facebookPage: facebookPageConfigured(),
+    facebookAppId: String(useRuntimeConfig(event).facebookAppId || ''),
     uploads: blobConfigured() ? 'blob' : hasRedis ? 'redis' : import.meta.dev ? 'local-files' : 'memory',
   }
 })

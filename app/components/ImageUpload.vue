@@ -15,46 +15,16 @@ const over = ref(false)
 const MAX_SIDE = 2400
 const MAX_BYTES = 3.8 * 1024 * 1024
 
-async function prepare(file: File): Promise<Blob> {
-  if (!file.type.startsWith('image/')) throw new Error('That file is not an image')
-  const keepAsIs = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)
-  let bmp: ImageBitmap
-  try { bmp = await createImageBitmap(file) }
-  catch { if (keepAsIs && file.size <= MAX_BYTES) return file; throw new Error('This browser can’t read that image. Try a JPEG or PNG.') }
-
-  const big = Math.max(bmp.width, bmp.height) > MAX_SIDE
-  if (keepAsIs && !big && file.size <= MAX_BYTES) { bmp.close(); return file }
-  if (file.type === 'image/gif' && file.size <= MAX_BYTES) { bmp.close(); return file } // keep animation
-
-  let scale = Math.min(1, MAX_SIDE / Math.max(bmp.width, bmp.height))
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const canvas = document.createElement('canvas')
-    canvas.width = Math.round(bmp.width * scale)
-    canvas.height = Math.round(bmp.height * scale)
-    const ctx = canvas.getContext('2d')!
-    ctx.fillStyle = '#fff' // JPEG has no transparency
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height)
-    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/jpeg', attempt ? 0.78 : 0.88))
-    if (blob && blob.size <= MAX_BYTES) { bmp.close(); return blob }
-    scale *= 0.75
-  }
-  bmp.close()
-  throw new Error('Could not make the image small enough. Try a smaller file.')
-}
-
 async function upload(file: File | undefined | null) {
   if (!file || busy.value) return
   busy.value = true
   error.value = ''
   status.value = 'Preparing…'
   try {
-    const blob = await prepare(file)
+    if (!file.type.startsWith('image/')) throw new Error('That file is not an image')
+    const blob = await compressImage(file, { maxSide: MAX_SIDE, maxBytes: MAX_BYTES })
     status.value = `Uploading ${(blob.size / 1024).toFixed(0)} KB…`
-    const form = new FormData()
-    const ext = blob.type.split('/')[1] || 'jpg'
-    form.append('file', blob, `${file.name.replace(/\.[^.]+$/, '') || 'image'}.${ext}`)
-    const res = await api<{ url: string; bytes: number; storage: string }>('/api/uploads', { method: 'POST', body: form })
+    const res = await uploadBlob(api, blob, file.name)
     status.value = `Uploaded (${(res.bytes / 1024).toFixed(0)} KB${res.storage === 'blob' ? ', Vercel Blob' : ''})`
     emit('uploaded', res.url)
   } catch (e) {

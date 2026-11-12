@@ -20,9 +20,16 @@ export default defineEventHandler(async (event) => {
   setHeader(event, 'cache-control', 'no-store, max-age=0')
   setHeader(event, 'content-type', 'text/html; charset=utf-8')
 
+  const q = getQuery(event)
+  const ua = getHeader(event, 'user-agent') || ''
+  const platform = parsePlatform(q.as) || platformFromUA(ua)
+  const view = applyOverride({ siteName: post.siteName, title: post.title, description: post.excerpt, image: post.cover }, platform ? post.platforms?.[platform] : undefined)
+  const baseExtra = { author: post.author || undefined, ...post.extra }
+  setHeader(event, 'vary', 'User-Agent')
   const meta = renderMetaTags({
-    url, siteName: post.siteName, title: post.title, description: post.excerpt, image: post.cover,
-    imageStyle: post.imageStyle, extra: { author: post.author || undefined, ...post.extra }, defaultType: 'article',
+    url, ...view, imageStyle: post.imageStyle, defaultType: 'article',
+    extra: view.imageOverridden ? { ...baseExtra, imageWidth: undefined, imageHeight: undefined, imageAlt: undefined } : baseExtra,
+    fbAppId: String(useRuntimeConfig(event).facebookAppId || '') || undefined,
   }).filter((t) => !t.startsWith('<title>')).join('\n    ')
 
   return `<!doctype html>
@@ -30,7 +37,7 @@ export default defineEventHandler(async (event) => {
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>${e(post.title)}${post.siteName ? ` · ${e(post.siteName)}` : ''}</title>
+    <title>${e(view.title)}${view.siteName ? ` · ${e(view.siteName)}` : ''}</title>
     ${meta}
     <style>
       :root { color-scheme: light dark; --muted: #6b7280; }

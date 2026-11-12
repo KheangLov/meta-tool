@@ -74,6 +74,9 @@ const abs = (p: string) => `${location.origin}${p}`
       <li><b>Video &amp; audio:</b> <code>/s/test-video</code> and <code>/s/test-audio</code> carry og:video / og:audio. Use <i>Show Telegram's saved preview</i> to see the type and duration Telegram stored.</li>
       <li><b>Message options:</b> in any editor, try <i>Larger / Smaller</i> media, <i>Above text</i>, HTML formatting, a hidden link (remove <code>{link}</code>) and <i>No preview</i>. The mock updates as you click. Then <i>Send to Telegram</i> (Saved Messages works well).</li>
       <li><b>Live update of sent messages:</b> send a link from the tool, change its image and save. The tool edits the sent message so it shows the new preview.</li>
+      <li><b>Per app:</b> paste <code>/s/test-per-app</code> into Telegram, Facebook, Messenger and WhatsApp. Each one should show its own title and image color (blue, red, green).</li>
+      <li><b>Facebook &amp; Messenger:</b> in an editor, pick the <i>Facebook</i> tab, change something, save, then <i>Re-scrape on Facebook</i> (needs a Facebook app, see README). Or use the Sharing Debugger link.</li>
+      <li><b>WhatsApp image size:</b> on the WhatsApp tab, use <i>Make a WhatsApp-safe copy</i> on the 2400×1260 image and compare the size check before and after.</li>
       <li><b>People vs Telegram:</b> tap a <code>/s/</code> link on your phone. You should land on the post page, not on the preview page.</li>
     </ol>
   </section>

@@ -14,7 +14,7 @@ Make short share links whose **Telegram preview** (site name, title, description
 ## Posts and Test kit
 
 - **Posts** (`/posts` in the editor) are simple article pages hosted by the tool at `/p/<slug>`, with their own preview tags. Share them directly, or click *Create a share link for this post*.
-- **Test kit** (`/test-kit`) has one button that creates 8 sample posts and matching share links (`/s/test-large`, `/s/test-khmer`, `/s/test-thumbnail`, `/s/test-no-image`, `/s/test-long-text`, `/s/test-emoji`, `/s/test-video`, `/s/test-audio`), plus `/s/test-override`. It also lists the test images and media in `public/test/` (1200×630 in three colors, 2400×1260, square, portrait, small, a video poster, a 6 s MP4 and an 8 s MP3). Both editors have a *Use a test image…* menu.
+- **Test kit** (`/test-kit`) has one button that creates 8 sample posts and matching share links (`/s/test-large`, `/s/test-khmer`, `/s/test-thumbnail`, `/s/test-no-image`, `/s/test-long-text`, `/s/test-emoji`, `/s/test-video`, `/s/test-audio`), plus `/s/test-override` and `/s/test-per-app` (a different title and image in each app). It also lists the test images and media in `public/test/` (1200×630 in three colors, 2400×1260, square, portrait, small, a video poster, a 6 s MP4 and an 8 s MP3). Both editors have a *Use a test image…* menu.
 
 ## Everything you can customise in a Telegram preview
 
@@ -51,6 +51,33 @@ Telegram only applies these to a message that is actually sent, so the tool can 
 4. In the editor, choose **Bot**, type `@yourchannel` (or a numeric chat id), and send.
 
 A bot can't post to Saved Messages, and it can only message a person who has started it. Use *My account* for those.
+
+## Facebook, Messenger and WhatsApp
+
+Every editor has a **Telegram / Facebook / Messenger / WhatsApp** switch above the preview. Each tab shows a mock of that app and its own update panel.
+
+**Different text or image per app.** Under *Different text or image per app* you can give Telegram, Facebook & Messenger, and WhatsApp their own title, description, image and site name. The server detects which app's crawler is asking (`TelegramBot`, `facebookexternalhit`/`meta-externalagent`, `WhatsApp`) and sends that version. Messenger uses Facebook's crawler, so it shares Facebook's version. Add `?as=whatsapp` (or `telegram`, `facebook`) to a `/s/` or `/p/` link to see a version in your browser.
+
+**Image checks.** Every image is checked against each app's rules:
+- Telegram: small or tall images become a thumbnail.
+- Facebook & Messenger: at least 200×200, under 8 MB, below 600×315 shows a small thumbnail, 1.91:1 avoids cropping.
+- WhatsApp: under 600 KB (some versions need under 300 KB), at least 300 px wide, no wider than 4:1.
+
+**⚡ Make a WhatsApp-safe copy** shrinks any image to 1200 px and under 300 KB, uploads it, and sets it as the WhatsApp-only image. Other apps keep the full-size one.
+
+**Facebook & Messenger tab:**
+- Share on Facebook / Send in Messenger buttons, and a link to the Sharing Debugger.
+- **Re-scrape on Facebook** (also updates Messenger). It runs automatically after every save when connected, then checks that Facebook's saved title, description and image match what you saved.
+- **Show Facebook's saved preview**: what Facebook currently has, with share and reaction counts. Facebook allows about 10 of these reads per link per hour.
+- **Publish on your Facebook Page** (optional). Facebook doesn't let apps change the card of a post that's already published, so delete and post again to get a new card.
+
+**WhatsApp tab:** WhatsApp has no refresh tool. It makes the preview when someone pastes the link, and phones keep it, so the reliable way to show a new preview is to share the newest `?v=` link. The tab has a Share on WhatsApp button, the image check and compressor, and a check of what WhatsApp's crawler sees.
+
+### Connect Facebook (optional)
+
+1. Go to <https://developers.facebook.com/apps>, create an app (type *Business* or *Other*), and copy its **App ID** and **App Secret** (*App settings → Basic*).
+2. In Vercel, add `NUXT_FACEBOOK_APP_ID` and `NUXT_FACEBOOK_APP_SECRET`, then redeploy. Pages also get an `fb:app_id` tag, which Facebook's debugger asks for.
+3. To publish to a Page as well, add `NUXT_FACEBOOK_PAGE_ID` and a Page access token with `pages_manage_posts` as `NUXT_FACEBOOK_PAGE_TOKEN`. You can generate one in the Graph API Explorer.
 
 ## Image uploads
 
@@ -138,6 +165,11 @@ Notes:
 | POST | `/api/telegram/send` | `{ owner: 'link:<slug>'\|'post:<slug>', via: 'account'\|'bot', chat, template, options: { size, position, disablePreview, silent, parseMode } }` |
 | GET / DELETE | `/api/telegram/sent?owner=` | List / forget (`&id=…&deleteMessage=1` also deletes in Telegram) |
 | POST | `/api/telegram/update-sent` | `{ owner, ids? }`: edit sent messages to the newest preview |
+| POST | `/api/facebook/refresh` | `{ url }` or `{ urls }` (max 10): re-scrape + compare |
+| POST | `/api/facebook/preview` | `{ url }`: what Facebook has saved |
+| POST | `/api/facebook/post` | `{ owner, template }`: publish to your Page |
+| GET | `/api/image-info?url=` | Size, dimensions and per-app checks |
+| GET | `/api/inspect?url=&as=` | Fetch as `telegram`, `facebook` or `whatsapp` |
 | POST | `/api/test-kit/seed` | Creates or resets the sample posts and links |
 | GET | `/api/telegram/status` | Whether Telegram is connected, and which account |
 | POST | `/api/telegram/preview` | `{ url }`: the preview Telegram has saved right now |

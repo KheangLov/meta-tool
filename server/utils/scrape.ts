@@ -38,11 +38,16 @@ export function parseMeta(html: string) {
 }
 
 export async function scrapeAsTelegram(url: string): Promise<ScrapeResult> {
+  return scrapeAs(url, TELEGRAM_UA)
+}
+
+/** Fetch a page the way a given app's crawler does */
+export async function scrapeAs(url: string, userAgent: string): Promise<ScrapeResult> {
   const started = Date.now()
   const empty = { siteName: '', title: '', description: '', image: '' }
   try {
     const res = await fetch(url, {
-      headers: { 'user-agent': TELEGRAM_UA, accept: 'text/html,*/*;q=0.8' },
+      headers: { 'user-agent': userAgent, accept: 'text/html,*/*;q=0.8' },
       redirect: 'follow',
       signal: AbortSignal.timeout(8000),
     })

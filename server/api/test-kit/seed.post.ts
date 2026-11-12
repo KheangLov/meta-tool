@@ -58,5 +58,22 @@ export default defineEventHandler(async (event) => {
   })
   created.push({ case: o.case, link: `/s/${o.slug}` })
 
+  const pa = PER_APP_LINK
+  const oldPa = await getLink(pa.slug)
+  await linkStore().setItem(pa.slug, {
+    slug: pa.slug,
+    targetUrl: `${origin}/p/${pa.target}`,
+    ...pa.base,
+    image: img(pa.base.image),
+    imageStyle: 'large',
+    platforms: cleanOverrides(Object.fromEntries(Object.entries(pa.platforms).map(([k, v]) => [k, { ...v, image: img(v.image) }]))),
+    postSlug: pa.target,
+    syncWithPost: false,
+    version: (oldPa?.version || 0) + 1,
+    createdAt: oldPa?.createdAt || now,
+    updatedAt: now,
+  })
+  created.push({ case: pa.case, link: `/s/${pa.slug}` })
+
   return { created }
 })
