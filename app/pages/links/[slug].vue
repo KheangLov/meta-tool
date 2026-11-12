@@ -175,11 +175,14 @@ const imageWarning = computed(() => {
         <textarea v-model="draft.description" class="input" rows="4" placeholder="A sentence or two" />
       </label>
 
-      <label class="field">
+      <div class="field">
         <span>Image URL</span>
-        <input v-model="draft.image" class="input" type="url" placeholder="https://…/cover-1200x630.jpg" />
+        <div class="row">
+          <input v-model="draft.image" class="input grow" type="url" placeholder="https://…/cover-1200x630.jpg" />
+          <TestImagePicker @pick="draft.image = $event" />
+        </div>
         <small v-if="imageWarning" class="hint" :class="{ warn: imageWarning.includes('Telegram') || imageWarning.includes('not') }">{{ imageWarning }}</small>
-      </label>
+      </div>
 
       <div class="field">
         <span>Image style</span>

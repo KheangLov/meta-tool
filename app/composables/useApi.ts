@@ -36,3 +36,20 @@ export function shareUrl(link: Pick<LinkMeta, 'slug' | 'version'>, versioned = t
   const base = `${location.origin}/s/${link.slug}`
   return versioned && link.version > 1 ? `${base}?v=${link.version}` : base
 }
+
+export interface Post {
+  slug: string
+  siteName: string
+  title: string
+  excerpt: string
+  body: string
+  cover: string
+  imageStyle: 'large' | 'small'
+  author: string
+  createdAt: string
+  updatedAt: string
+}
+
+export function postUrl(slug: string) {
+  return `${location.origin}/p/${slug}`
+}

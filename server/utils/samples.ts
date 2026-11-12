@@ -1,0 +1,106 @@
+/** Ready-made test content. Each case checks one thing about how Telegram shows a preview. */
+export const TEST_IMAGES = [
+  { file: 'large-blue-1200x630.jpg', w: 1200, h: 630, note: 'Ideal size: large preview' },
+  { file: 'large-red-1200x630.jpg', w: 1200, h: 630, note: 'Swap with blue to test changing the image' },
+  { file: 'large-green-1200x630.jpg', w: 1200, h: 630, note: 'Another color for update tests' },
+  { file: 'wide-2400x1260.jpg', w: 2400, h: 1260, note: 'High resolution, same ratio' },
+  { file: 'square-600x600.jpg', w: 600, h: 600, note: 'Square: usually shown as a thumbnail' },
+  { file: 'tall-600x900.jpg', w: 600, h: 900, note: 'Portrait: usually shown as a thumbnail' },
+  { file: 'small-200x200.jpg', w: 200, h: 200, note: 'Small: thumbnail' },
+]
+
+interface Sample {
+  slug: string
+  case: string
+  post: { siteName: string; title: string; excerpt: string; body: string; image: string; imageStyle: 'large' | 'small'; author: string }
+  /** Optional share-link meta that differs from the post (to show a link overriding a page) */
+  linkOverride?: { title: string; description: string; image: string }
+}
+
+const BODY_EN = `This is a sample post made by Link Preview Studio so you have something to share while testing.
+
+Change the title, description or image in the editor, save, then refresh the link in Telegram to see the new preview.
+
+Everything on this page is test content.`
+
+const BODY_KM = `នេះជាអត្ថបទគំរូសម្រាប់សាកល្បងការបង្ហាញតំណនៅក្នុង Telegram។
+
+សូមកែចំណងជើង ការពិពណ៌នា ឬរូបភាព រួចរក្សាទុក ហើយធ្វើបច្ចុប្បន្នភាពតំណនៅក្នុង Telegram ដើម្បីមើលការបង្ហាញថ្មី។`
+
+export const SAMPLES: Sample[] = [
+  {
+    slug: 'sample-large',
+    case: 'Large image (1200×630)',
+    post: {
+      siteName: 'Angkor Shop', author: 'Test Team', imageStyle: 'large', image: 'large-blue-1200x630.jpg',
+      title: 'Rainy season sale: 30% off all rain jackets',
+      excerpt: 'Free delivery in Phnom Penh until 30 November. Tap to see all styles.',
+      body: BODY_EN,
+    },
+  },
+  {
+    slug: 'sample-khmer',
+    case: 'Khmer text',
+    post: {
+      siteName: 'ហាងអង្គរ', author: 'ក្រុមសាកល្បង', imageStyle: 'large', image: 'large-green-1200x630.jpg',
+      title: 'បញ្ចុះតម្លៃ ៣០% លើអាវភ្លៀងទាំងអស់',
+      excerpt: 'ដឹកជញ្ជូនឥតគិតថ្លៃក្នុងរាជធានីភ្នំពេញ រហូតដល់ថ្ងៃទី៣០ ខែវិច្ឆិកា។',
+      body: BODY_KM,
+    },
+  },
+  {
+    slug: 'sample-thumbnail',
+    case: 'Square image → small thumbnail',
+    post: {
+      siteName: 'Phnom Penh Eats', author: 'Test Team', imageStyle: 'small', image: 'square-600x600.jpg',
+      title: 'Top 5 noodle soups to try this week',
+      excerpt: 'Square image with the small-thumbnail card style.',
+      body: BODY_EN,
+    },
+  },
+  {
+    slug: 'sample-no-image',
+    case: 'No image (text only)',
+    post: {
+      siteName: 'Company News', author: 'Test Team', imageStyle: 'large', image: '',
+      title: 'Office closed on Water Festival holidays',
+      excerpt: 'A text-only preview: no og:image tag at all.',
+      body: BODY_EN,
+    },
+  },
+  {
+    slug: 'sample-long-text',
+    case: 'Very long title and description',
+    post: {
+      siteName: 'A Site With A Rather Long Name For Testing Truncation',
+      author: 'Test Team', imageStyle: 'large', image: 'large-red-1200x630.jpg',
+      title: 'This is a deliberately long title to see where Telegram cuts it off in the link preview card on phones and desktop',
+      excerpt:
+        'This description is intentionally long. It keeps going to show how many lines Telegram displays before it trims the text. ' +
+        'Line lengths differ between phones, tablets and Telegram Desktop, so check it on each one. ' +
+        'If you can still read this sentence in the preview, Telegram is showing a lot of text. ' +
+        'Usually it is better to keep descriptions to one or two short sentences.',
+      body: BODY_EN,
+    },
+  },
+  {
+    slug: 'sample-emoji',
+    case: 'Emoji and special characters',
+    post: {
+      siteName: 'Fun & Games 🎮', author: 'Test Team', imageStyle: 'large', image: 'wide-2400x1260.jpg',
+      title: '🎉 Big launch: "Quotes", <tags> & ampersands — all safe',
+      excerpt: 'Checks that emoji 🚀🔥, “curly quotes”, <b>not bold</b> and & signs show correctly.',
+      body: BODY_EN,
+    },
+  },
+]
+
+/** One extra share link that points at sample-large but shows different meta */
+export const OVERRIDE_LINK = {
+  slug: 'test-override',
+  case: 'Share link with its own title and image (overrides the page)',
+  target: 'sample-large',
+  title: 'Flash deal: today only! ⚡',
+  description: 'This share link shows its own title and image, while the page it opens is the rain-jacket post.',
+  image: 'large-red-1200x630.jpg',
+}

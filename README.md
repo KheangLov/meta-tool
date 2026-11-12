@@ -11,6 +11,11 @@ Make short share links whose **Telegram preview** (site name, title, description
 - Every saved change adds a new `?v=` number. Post `…/s/promo?v=3` and Telegram treats it as a new link, so it shows the new preview straight away.
 - **Refresh in Telegram (built in):** the tool sends your link to Telegram's official [@WebpageBot](https://t.me/WebpageBot) for you. It can also press "Update with content", and it shows the preview Telegram really has saved, image included. Turn on *Refresh Telegram automatically after saving* and every save updates Telegram too. This needs a connected Telegram account (see below).
 
+## Posts and Test kit
+
+- **Posts** (`/posts` in the editor) are simple article pages hosted by the tool at `/p/<slug>`, with their own preview tags. Share them directly, or click *Create a share link for this post*.
+- **Test kit** (`/test-kit`) has one button that creates 6 sample posts and matching share links (`/s/test-large`, `/s/test-khmer`, `/s/test-thumbnail`, `/s/test-no-image`, `/s/test-long-text`, `/s/test-emoji`), plus `/s/test-override`. It also lists the test images in `public/test/` (1200×630 in three colors, 2400×1260, square, portrait and small). Both editors have a *Use a test image…* menu.
+
 ## Run locally
 
 ```bash
@@ -73,6 +78,9 @@ Notes:
 | POST | `/api/links` | `{ targetUrl, slug?, importMeta?, title?, description?, image?, siteName?, imageStyle? }` |
 | GET / PUT / DELETE | `/api/links/:slug` | PUT: any editable fields |
 | GET | `/api/inspect?url=` | Fetches a URL as TelegramBot and returns the parsed meta tags |
+| GET / POST | `/api/posts` | POST: `{ title, slug?, siteName?, excerpt?, body?, cover?, imageStyle?, author? }` |
+| GET / PUT / DELETE | `/api/posts/:slug` | PUT: any post fields |
+| POST | `/api/test-kit/seed` | Creates or resets the sample posts and links |
 | GET | `/api/telegram/status` | Whether Telegram is connected, and which account |
 | POST | `/api/telegram/preview` | `{ url }`: the preview Telegram has saved right now |
 | POST | `/api/telegram/refresh` | `{ url }` or `{ urls: [...] }` (max 5), `withContent?`: refresh with @WebpageBot |
@@ -84,8 +92,12 @@ app/                       Editor UI (Vue, runs in the browser)
   components/TelegramPreview.vue   Telegram-style preview card
   pages/index.vue          Create and list links
   pages/links/[slug].vue   Editor, preview and "Update in Telegram" panel
+  pages/posts/…            Create and edit posts
+  pages/test-kit.vue       Sample content + test images
 server/
   routes/s/[slug].ts       The public share link (meta HTML for bots, redirect for people)
+  routes/p/[slug].ts       Public post page
+  utils/samples.ts         Sample posts and test cases
   api/…                    Create, read, update and delete links + inspect
   api/telegram/…           Refresh with @WebpageBot, and read Telegram's saved preview
   plugins/storage.ts       Chooses Upstash Redis, local files or memory
