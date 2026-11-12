@@ -18,8 +18,15 @@ export default defineEventHandler(async (event) => {
     while (await store.hasItem(slug))
   }
 
+  let post: Post | null = null
+  if (body.postSlug) {
+    post = await getPost(String(body.postSlug))
+    if (!post) throw createError({ statusCode: 400, statusMessage: 'Post not found' })
+  }
+  const syncWithPost = !!post && body.syncWithPost !== false
+
   let imported = { siteName: '', title: '', description: '', image: '' }
-  if (body.importMeta !== false) {
+  if (body.importMeta !== false && !post) {
     const r = await scrapeAsTelegram(fields.targetUrl!)
     if (r.ok) imported = r.resolved
   }
@@ -33,6 +40,8 @@ export default defineEventHandler(async (event) => {
     description: fields.description ?? imported.description,
     image: fields.image ?? imported.image,
     imageStyle: fields.imageStyle ?? 'large',
+    ...(syncWithPost ? previewFromPost(post!) : {}),
+    ...(post ? { postSlug: post.slug, syncWithPost } : {}),
     version: 1,
     createdAt: now,
     updatedAt: now,

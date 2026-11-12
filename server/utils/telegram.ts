@@ -17,8 +17,26 @@ export interface TgPreview {
   description?: string
   /** true → Telegram shows the big image, false → small thumbnail */
   hasLargeMedia?: boolean
+  /** Telegram stored an image for this link */
+  hasPhoto?: boolean
   /** The image Telegram stored, as a data: URL */
   image?: string
+}
+
+export interface Expected { siteName: string; title: string; description: string; image: string }
+
+/** Lists the differences between what Telegram shows and what we saved (empty = up to date). */
+export function comparePreview(p: TgPreview, want: Expected): string[] {
+  if (p.state !== 'ready') return [p.state === 'pending' ? 'Telegram is still loading the page' : 'Telegram has no preview']
+  const n = (s = '') => s.replace(/\s+/g, ' ').trim()
+  const diffs: string[] = []
+  if (n(p.title) !== n(want.title)) diffs.push(`title is "${n(p.title)}"`)
+  // Telegram may shorten long descriptions, so a matching start is enough
+  const got = n(p.description).replace(/…$/, '')
+  if (n(want.description) ? !n(want.description).startsWith(got) || !got : !!got) diffs.push(`description is "${got}"`)
+  if (n(want.siteName) && n(p.siteName) !== n(want.siteName)) diffs.push(`site name is "${n(p.siteName)}"`)
+  if (!!want.image !== !!p.hasPhoto) diffs.push(want.image ? 'image is missing' : 'still shows an image')
+  return diffs
 }
 
 export interface TgRefreshResult {
@@ -71,7 +89,7 @@ export async function withTelegram<T>(fn: (client: TelegramClient) => Promise<T>
     if (!(await withTimeout(client.checkAuthorization(), 10000, 'Checking Telegram login'))) {
       throw createError({ statusCode: 401, statusMessage: 'Telegram session expired or was logged out. Run `npm run telegram:login` again.' })
     }
-    return await withTimeout(fn(client), 45000, 'Telegram request')
+    return await withTimeout(fn(client), 52000, 'Telegram request')
   } catch (e: any) {
     if (e?.statusCode) throw e
     const msg = String(e?.errorMessage || e?.message || e)
@@ -106,6 +124,7 @@ async function toPreview(client: TelegramClient, media: Api.TypeMessageMedia | u
     title: wp.title || '',
     description: wp.description || '',
     hasLargeMedia: !!wp.hasLargeMedia,
+    hasPhoto: wp.photo instanceof Api.Photo,
     image,
   }
 }

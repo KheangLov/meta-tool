@@ -28,6 +28,8 @@ export interface LinkMeta {
   image: string
   imageStyle: 'large' | 'small'
   version: number
+  postSlug?: string
+  syncWithPost?: boolean
   createdAt: string
   updatedAt: string
 }

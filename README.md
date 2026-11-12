@@ -16,6 +16,15 @@ Make short share links whose **Telegram preview** (site name, title, description
 - **Posts** (`/posts` in the editor) are simple article pages hosted by the tool at `/p/<slug>`, with their own preview tags. Share them directly, or click *Create a share link for this post*.
 - **Test kit** (`/test-kit`) has one button that creates 6 sample posts and matching share links (`/s/test-large`, `/s/test-khmer`, `/s/test-thumbnail`, `/s/test-no-image`, `/s/test-long-text`, `/s/test-emoji`), plus `/s/test-override`. It also lists the test images in `public/test/` (1200×630 in three colors, 2400×1260, square, portrait and small). Both editors have a *Use a test image…* menu.
 
+## How the tool keeps previews up to date after you save
+
+1. **Your server always serves the latest.** `/s/…` and `/p/…` are never cached (`Cache-Control: no-store`), so Telegram's crawler always reads what you last saved.
+2. **Share links follow their post.** A share link made from a post is *synced*: saving the post copies its title, summary and image into the link and bumps its `?v=` version. Untick *Keep in sync with post* to give a link its own preview.
+3. **Every change gets a new `?v=` link.** Telegram has never seen it, so pasting it always shows the newest preview, even without a connected Telegram account.
+4. **Telegram is refreshed and checked** (when a Telegram account is connected). After each save, the tool sends every affected URL to @WebpageBot: the post, and each synced link both plain and with the newest `?v=`. It then reads back what Telegram has stored and compares the title, description, site name and whether there's an image. If anything is still old, it presses *Update with content* and checks again. Each link is marked ✅ up to date or ⚠️ still old, with the differences listed.
+
+Links that were already posted in chats may still show the old card until the chat reloads. That's how Telegram works, and the refresh fixes it for new views.
+
 ## Run locally
 
 ```bash

@@ -13,6 +13,10 @@ export interface LinkMeta {
   imageStyle: ImageStyle
   /** Bumped every time preview fields change; used as ?v= to force a fresh Telegram preview */
   version: number
+  /** Set when the link points at one of our posts */
+  postSlug?: string
+  /** When true, the link always copies its preview from the post (updated whenever the post is saved) */
+  syncWithPost?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -95,6 +99,41 @@ export function cleanFields(body: any, partial = false) {
 }
 
 export const PREVIEW_FIELDS = ['siteName', 'title', 'description', 'image', 'imageStyle'] as const
+
+export function previewFromPost(post: Post): Pick<LinkMeta, (typeof PREVIEW_FIELDS)[number]> {
+  return { siteName: post.siteName, title: post.title, description: post.excerpt, image: post.cover, imageStyle: post.imageStyle }
+}
+
+/** Copies a post's preview into every share link that follows it. Returns the links whose preview changed. */
+export async function syncLinksForPost(post: Post) {
+  const changed: LinkMeta[] = []
+  for (const link of await listLinks()) {
+    if (link.postSlug !== post.slug || !link.syncWithPost) continue
+    const next = { ...link, ...previewFromPost(post) }
+    if (PREVIEW_FIELDS.some((k) => next[k] !== link[k])) {
+      next.version = link.version + 1
+      next.updatedAt = new Date().toISOString()
+      await linkStore().setItem(link.slug, next)
+      changed.push(next)
+    }
+  }
+  return changed
+}
+
+/** Finds our own link or post behind a URL on this site, so we know what Telegram *should* show. */
+export async function expectedPreviewFor(url: string, origin: string) {
+  let u: URL
+  try { u = new URL(url) } catch { return null }
+  if (u.origin !== origin) return null
+  const m = /^\/(s|p)\/([^/]+)\/?$/.exec(u.pathname)
+  if (!m) return null
+  if (m[1] === 's') {
+    const l = await getLink(m[2])
+    return l ? { siteName: l.siteName, title: l.title, description: l.description, image: l.image } : null
+  }
+  const p = await getPost(m[2])
+  return p ? { siteName: p.siteName, title: p.title, description: p.excerpt, image: p.cover } : null
+}
 
 export function escapeHtml(s: string) {
   return s

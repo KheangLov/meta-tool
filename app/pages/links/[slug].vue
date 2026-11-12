@@ -24,14 +24,14 @@ const showTags = ref(false)
 const copied = ref('')
 
 interface TgPreview { state: 'ready' | 'pending' | 'empty' | 'none'; url?: string; siteName?: string; title?: string; description?: string; hasLargeMedia?: boolean; image?: string }
-interface TgRefresh { results: { url: string; botReplies: string[]; pressedButton?: string; preview: TgPreview }[] }
 
 const tgReady = ref(false)
 const autoRefresh = ref(true)
 const withContent = ref(false)
 const tgBusy = ref<'' | 'refresh' | 'cached'>('')
 const tgError = ref('')
-const tgRefresh = ref<TgRefresh | null>(null)
+const sync = ref<{ run: (urls: string[], o?: { withContent?: boolean }) => Promise<any[] | undefined>; running: boolean } | null>(null)
+const syncDraft = ref(false)
 const tgCached = ref<TgPreview | null>(null)
 
 onMounted(async () => {
@@ -44,14 +44,21 @@ const refreshUrls = computed(() => [...new Set([baseShare.value, currentShare.va
 async function refreshTelegram() {
   tgBusy.value = 'refresh'
   tgError.value = ''
-  tgRefresh.value = null
+  tgCached.value = null
   try {
-    tgRefresh.value = await api<TgRefresh>('/api/telegram/refresh', {
-      method: 'POST', body: { urls: refreshUrls.value, withContent: withContent.value },
-    })
-  } catch (e) { tgError.value = errMsg(e) }
-  finally { tgBusy.value = '' }
+    const rows = await sync.value?.run(refreshUrls.value, { withContent: withContent.value })
+    return !!rows?.every((r) => r.state === 'match' || r.state === 'unknown')
+  } finally { tgBusy.value = '' }
 }
+
+// Turning on "keep in sync" immediately shows the post's preview in the editor
+watch(syncDraft, async (on) => {
+  if (!on || !link.value?.postSlug || link.value.syncWithPost) return
+  try {
+    const p = await api<Post>(`/api/posts/${link.value.postSlug}`)
+    Object.assign(draft, { siteName: p.siteName, title: p.title, description: p.excerpt, image: p.cover, imageStyle: p.imageStyle })
+  } catch (e) { error.value = errMsg(e) }
+})
 
 async function loadCached() {
   tgBusy.value = 'cached'
@@ -65,6 +72,7 @@ const FIELDS = ['targetUrl', 'siteName', 'title', 'description', 'image', 'image
 
 function fill(l: LinkMeta) {
   for (const k of FIELDS) (draft as any)[k] = l[k]
+  syncDraft.value = !!l.syncWithPost
 }
 
 async function load() {
@@ -75,7 +83,7 @@ async function load() {
 }
 onMounted(load)
 
-const dirty = computed(() => !!link.value && FIELDS.some((k) => (draft as any)[k] !== link.value![k]))
+const dirty = computed(() => !!link.value && (FIELDS.some((k) => (draft as any)[k] !== link.value![k]) || syncDraft.value !== !!link.value.syncWithPost))
 const currentShare = computed(() => (link.value ? shareUrl(link.value) : ''))
 const baseShare = computed(() => (link.value ? shareUrl(link.value, false) : ''))
 
@@ -83,17 +91,19 @@ async function save() {
   saving.value = true
   error.value = notice.value = ''
   try {
-    const res = await api<LinkMeta & { previewChanged: boolean }>(`/api/links/${slug}`, { method: 'PUT', body: { ...draft } })
+    const res = await api<LinkMeta & { previewChanged: boolean }>(`/api/links/${slug}`, { method: 'PUT', body: { ...draft, syncWithPost: syncDraft.value } })
     link.value = res
     fill(res)
     seen.value = null
     notice.value = res.previewChanged
-      ? `Saved as version ${res.version}.` + (tgReady.value && autoRefresh.value ? ' Refreshing Telegram…' : ' Share the new link below, or refresh the old one in Telegram.')
+      ? `Saved as version ${res.version}.` + (tgReady.value && autoRefresh.value ? ' Updating Telegram…' : ` New link with the latest preview: ${shareUrl(res)}`)
       : 'Saved.'
     if (res.previewChanged && tgReady.value && autoRefresh.value) {
       saving.value = false
-      await refreshTelegram()
-      if (!tgError.value) notice.value = `Saved as version ${res.version} and Telegram's preview was refreshed.`
+      const ok = await refreshTelegram()
+      notice.value = ok
+        ? `Saved as version ${res.version}. Telegram now shows the latest preview.`
+        : `Saved as version ${res.version}. Telegram may still show the old preview for some links. See "Update in Telegram".`
     }
   } catch (e) { error.value = errMsg(e) }
   finally { saving.value = false }
@@ -156,10 +166,16 @@ const imageWarning = computed(() => {
         <span>Target URL <em>(where people land)</em></span>
         <div class="row">
           <input v-model="draft.targetUrl" class="input grow" type="url" />
-          <button class="btn ghost" :disabled="importing" @click="importFromTarget">{{ importing ? 'Importing…' : 'Import meta' }}</button>
+          <button class="btn ghost" :disabled="importing || syncDraft" @click="importFromTarget">{{ importing ? 'Importing…' : 'Import meta' }}</button>
         </div>
       </label>
 
+      <div v-if="link.postSlug" class="syncbox">
+        <label class="check"><input v-model="syncDraft" type="checkbox" /> Keep in sync with post <NuxtLink :to="`/posts/${link.postSlug}`"><code>/p/{{ link.postSlug }}</code></NuxtLink></label>
+        <p v-if="syncDraft" class="muted small">This link copies the post's title, summary and image. Edit the post, and this link updates automatically. Untick to give the link its own preview.</p>
+      </div>
+
+      <fieldset class="plain" :disabled="syncDraft">
       <label class="field">
         <span>Site name <em class="count">{{ draft.siteName.length }}</em></span>
         <input v-model="draft.siteName" class="input" placeholder="My Shop" />
@@ -191,6 +207,8 @@ const imageWarning = computed(() => {
           <button :class="{ on: draft.imageStyle === 'small' }" @click="draft.imageStyle = 'small'">Small thumbnail</button>
         </div>
       </div>
+
+      </fieldset>
 
       <div class="row actions">
         <button class="btn primary" :disabled="!dirty || saving" @click="save">{{ saving ? 'Saving…' : dirty ? 'Save changes' : 'Saved' }}</button>
@@ -239,10 +257,10 @@ const imageWarning = computed(() => {
         <div class="step">
           <b>B. Refresh a link you already posted</b>
           <template v-if="tgReady">
-            <p class="muted small">Sends your link to Telegram's official @WebpageBot for you, then shows the preview Telegram has saved.</p>
+            <p class="muted small">Sends your links to Telegram's official @WebpageBot, then checks that Telegram shows what you saved. If it doesn't, the tool presses "Update with content" and checks again.</p>
             <div class="copyrow">
               <button class="btn sm primary" :disabled="!!tgBusy || dirty" @click="refreshTelegram">
-                {{ tgBusy === 'refresh' ? 'Refreshing… (up to 20 s)' : 'Refresh in Telegram' }}
+                {{ tgBusy === 'refresh' ? 'Updating…' : 'Refresh in Telegram' }}
               </button>
               <button class="btn sm ghost" :disabled="!!tgBusy" @click="loadCached">
                 {{ tgBusy === 'cached' ? 'Loading…' : "Show Telegram's saved preview" }}
@@ -252,17 +270,9 @@ const imageWarning = computed(() => {
             <p v-if="dirty" class="muted small">Save your changes first.</p>
             <p v-if="tgError" class="error small">{{ tgError }}</p>
 
-            <div v-for="r in tgRefresh?.results || []" :key="r.url" class="tgresult">
-              <div class="small"><code>{{ r.url }}</code></div>
-              <ul class="botreplies small">
-                <li v-for="(t, i) in r.botReplies" :key="i">🤖 {{ t }}</li>
-                <li v-if="!r.botReplies.length" class="muted">No reply from @WebpageBot yet</li>
-                <li v-if="r.pressedButton" class="muted">Pressed "{{ r.pressedButton }}"</li>
-              </ul>
-              <TgRealPreview :preview="r.preview" :url="r.url" :theme="theme" />
-            </div>
+            <TelegramSync ref="sync" :theme="theme" />
 
-            <div v-if="tgCached && !tgRefresh" class="tgresult">
+            <div v-if="tgCached" class="tgresult">
               <div class="small muted">Saved in Telegram right now for <code>{{ baseShare }}</code></div>
               <TgRealPreview :preview="tgCached" :url="baseShare" :theme="theme" />
             </div>

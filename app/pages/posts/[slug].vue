@@ -12,9 +12,20 @@ const notice = ref('')
 const saving = ref(false)
 const making = ref(false)
 const tgReady = ref(false)
-const tgBusy = ref(false)
-const tgMsg = ref('')
+const autoRefresh = ref(true)
 const copied = ref(false)
+const links = ref<LinkMeta[]>([])
+const sync = ref<{ run: (urls: string[]) => Promise<any[] | undefined>; running: boolean } | null>(null)
+
+async function loadLinks() {
+  try { links.value = await api<LinkMeta[]>('/api/links', { query: { postSlug: slug } }) } catch {}
+}
+
+/** Every URL that shows this post's preview: the post itself and each synced share link (plain + newest ?v=) */
+const affectedUrls = computed(() => [
+  url.value,
+  ...links.value.filter((l) => l.syncWithPost).flatMap((l) => [shareUrl(l, false), shareUrl(l)]),
+])
 
 function fill(p: Post) { for (const k of FIELDS) (draft as any)[k] = p[k] }
 
@@ -22,6 +33,7 @@ onMounted(async () => {
   try { post.value = await api<Post>(`/api/posts/${slug}`); fill(post.value) }
   catch (e) { error.value = errMsg(e) }
   try { tgReady.value = !!(await $fetch<{ telegram: boolean }>('/api/health')).telegram } catch {}
+  loadLinks()
 })
 
 const dirty = computed(() => !!post.value && FIELDS.some((k) => (draft as any)[k] !== post.value![k]))
@@ -31,9 +43,22 @@ async function save() {
   saving.value = true
   error.value = notice.value = ''
   try {
-    post.value = await api<Post>(`/api/posts/${slug}`, { method: 'PUT', body: { ...draft } })
-    fill(post.value)
-    notice.value = 'Saved. The page is updated. Refresh it in Telegram if you already shared it.'
+    const res = await api<Post & { previewChanged: boolean; syncedLinks: LinkMeta[] }>(`/api/posts/${slug}`, { method: 'PUT', body: { ...draft } })
+    post.value = res
+    fill(res)
+    await loadLinks()
+    if (!res.previewChanged) { notice.value = 'Saved.'; return }
+    const n = res.syncedLinks.length
+    const linkNote = n ? ` ${n} share link${n > 1 ? 's were' : ' was'} updated too.` : ''
+    if (tgReady.value && autoRefresh.value) {
+      notice.value = `Saved.${linkNote} Updating Telegram…`
+      saving.value = false
+      const rows = await sync.value?.run(affectedUrls.value)
+      const ok = !!rows?.every((r) => r.state === 'match' || r.state === 'unknown')
+      notice.value = ok ? `Saved.${linkNote} Telegram now shows the latest preview.` : `Saved.${linkNote} Telegram may still show the old preview for some links. See below.`
+    } else {
+      notice.value = `Saved.${linkNote} Links already posted in Telegram keep their old preview until refreshed. The newest ?v= links below always show the latest.`
+    }
   } catch (e) { error.value = errMsg(e) }
   finally { saving.value = false }
 }
@@ -44,25 +69,20 @@ async function makeShareLink() {
   try {
     const link = await api<LinkMeta>('/api/links', {
       method: 'POST',
-      body: {
-        targetUrl: url.value, importMeta: false,
-        siteName: draft.siteName, title: draft.title, description: draft.excerpt,
-        image: draft.cover, imageStyle: draft.imageStyle,
-      },
+      body: { targetUrl: url.value, postSlug: slug, syncWithPost: true },
     })
     await navigateTo(`/links/${link.slug}`)
   } catch (e) { error.value = errMsg(e) }
   finally { making.value = false }
 }
 
-async function refreshTelegram() {
-  tgBusy.value = true
-  tgMsg.value = ''
-  try {
-    const r = await api<{ results: { botReplies: string[] }[] }>('/api/telegram/refresh', { method: 'POST', body: { url: url.value } })
-    tgMsg.value = '🤖 ' + (r.results[0]?.botReplies.join(' · ') || 'Sent to @WebpageBot')
-  } catch (e) { tgMsg.value = errMsg(e) }
-  finally { tgBusy.value = false }
+function refreshTelegram() {
+  return sync.value?.run(affectedUrls.value)
+}
+
+const copiedText = ref('')
+async function copyText(t: string) {
+  try { await navigator.clipboard.writeText(t); copiedText.value = t; setTimeout(() => (copiedText.value = ''), 1500) } catch {}
 }
 
 async function copyUrl() {
@@ -128,6 +148,7 @@ async function remove() {
         <span class="grow" />
         <button class="btn danger ghost" @click="remove">Delete</button>
       </div>
+      <label v-if="tgReady" class="check"><input v-model="autoRefresh" type="checkbox" /> Refresh Telegram automatically after saving</label>
       <p v-if="notice" class="notice">{{ notice }}</p>
       <p v-if="error" class="error">{{ error }}</p>
     </section>
@@ -156,10 +177,22 @@ async function remove() {
         </div>
         <div class="copyrow">
           <button class="btn sm" :disabled="making" @click="makeShareLink">{{ making ? 'Creating…' : 'Create a share link for this post' }}</button>
-          <button v-if="tgReady" class="btn sm ghost" :disabled="tgBusy || dirty" @click="refreshTelegram">{{ tgBusy ? 'Refreshing…' : 'Refresh in Telegram' }}</button>
+          <button v-if="tgReady" class="btn sm ghost" :disabled="!!sync?.running || dirty" @click="refreshTelegram">{{ sync?.running ? 'Updating…' : 'Refresh in Telegram' }}</button>
         </div>
-        <p v-if="tgMsg" class="small">{{ tgMsg }}</p>
-        <p class="muted small">A share link (<code>/s/…</code>) lets you change the preview separately from the page, and adds <code>?v=</code> versions.</p>
+        <p class="muted small">Share links made here stay in sync: saving the post updates them and gives each a new <code>?v=</code> version.</p>
+
+        <div v-if="links.length" class="linked">
+          <div class="small muted">Share links for this post</div>
+          <div v-for="l in links" :key="l.slug" class="linkedrow small">
+            <NuxtLink :to="`/links/${l.slug}`"><code>/s/{{ l.slug }}</code></NuxtLink>
+            <span class="pill">{{ l.syncWithPost ? 'synced' : 'own preview' }}</span>
+            <span class="grow" />
+            <code class="muted">v{{ l.version }}</code>
+            <button class="linkbtn" @click="copyText(shareUrl(l))">{{ copiedText === shareUrl(l) ? 'copied ✓' : 'copy newest' }}</button>
+          </div>
+        </div>
+
+        <TelegramSync ref="sync" :theme="theme" />
       </div>
     </section>
   </div>

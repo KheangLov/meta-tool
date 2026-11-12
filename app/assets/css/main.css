@@ -108,3 +108,10 @@ textarea.input { resize: vertical; }
   .nav { margin-left: 6px; }
   .kit { font-size: 12px; }
 }
+fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
+fieldset.plain:disabled .input, fieldset.plain:disabled .seg { opacity: .6; }
+.syncbox { background: #eef4fb; border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; }
+.syncbox .check { margin: 0; color: var(--text); }
+.syncbox p { margin: 4px 0 0; }
+.linked { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; display: grid; gap: 4px; }
+.linkedrow { display: flex; gap: 8px; align-items: center; }

@@ -4,8 +4,17 @@ export default defineEventHandler(async (event) => {
   const link = await getLink(slug)
   if (!link) throw createError({ statusCode: 404, statusMessage: 'Link not found' })
 
-  const fields = cleanFields((await readBody(event)) || {}, true)
+  const body = (await readBody(event)) || {}
+  const fields = cleanFields(body, true)
   const next: LinkMeta = { ...link, ...fields, updatedAt: new Date().toISOString() }
+
+  if (body.syncWithPost !== undefined) next.syncWithPost = !!body.syncWithPost && !!link.postSlug
+  if (next.syncWithPost && next.postSlug) {
+    // A synced link always shows the post's current preview
+    const post = await getPost(next.postSlug)
+    if (post) Object.assign(next, previewFromPost(post))
+    else next.syncWithPost = false
+  }
 
   // Any change to what the preview shows gets a new version → new ?v= URL Telegram hasn't cached yet
   const previewChanged = PREVIEW_FIELDS.some((k) => next[k] !== link[k])
