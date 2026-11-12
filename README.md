@@ -14,7 +14,7 @@ Make short share links whose **Telegram preview** (site name, title, description
 ## Posts and Test kit
 
 - **Posts** (`/posts` in the editor) are simple article pages hosted by the tool at `/p/<slug>`, with their own preview tags. Share them directly, or click *Create a share link for this post*.
-- **Test kit** (`/test-kit`) has one button that creates 6 sample posts and matching share links (`/s/test-large`, `/s/test-khmer`, `/s/test-thumbnail`, `/s/test-no-image`, `/s/test-long-text`, `/s/test-emoji`), plus `/s/test-override`. It also lists the test images in `public/test/` (1200×630 in three colors, 2400×1260, square, portrait and small). Both editors have a *Use a test image…* menu.
+- **Test kit** (`/test-kit`) has one button that creates 8 sample posts and matching share links (`/s/test-large`, `/s/test-khmer`, `/s/test-thumbnail`, `/s/test-no-image`, `/s/test-long-text`, `/s/test-emoji`, `/s/test-video`, `/s/test-audio`), plus `/s/test-override`. It also lists the test images and media in `public/test/` (1200×630 in three colors, 2400×1260, square, portrait, small, a video poster, a 6 s MP4 and an 8 s MP3). Both editors have a *Use a test image…* menu.
 
 ## Everything you can customise in a Telegram preview
 
