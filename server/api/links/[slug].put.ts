@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Any change to what the preview shows gets a new version → new ?v= URL Telegram hasn't cached yet
-  const previewChanged = PREVIEW_FIELDS.some((k) => next[k] !== link[k])
+  const previewChanged = linkPreviewDiffers(next, link)
   if (previewChanged) next.version = link.version + 1
 
   await linkStore().setItem(link.slug, next)

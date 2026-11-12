@@ -23,6 +23,8 @@ export default defineNuxtConfig({
     telegramApiId: '',
     telegramApiHash: '',
     telegramSession: '',
+    // Optional bot (from @BotFather) for posting to channels/groups
+    telegramBotToken: '',
   },
 
   nitro: {

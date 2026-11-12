@@ -9,6 +9,10 @@ export interface Post {
   cover: string
   imageStyle: 'large' | 'small'
   author: string
+  /** Extra Open Graph / Telegram tags */
+  extra?: PreviewExtra
+  /** Bumped when anything in the preview changes; used as ?v= on the post URL */
+  version?: number
   createdAt: string
   updatedAt: string
 }
@@ -36,6 +40,7 @@ export function cleanPost(body: any) {
   if (body.body !== undefined) out.body = str(body.body, 50_000)
   if (body.author !== undefined) out.author = str(body.author, 200)
   if (body.imageStyle !== undefined) out.imageStyle = body.imageStyle === 'small' ? 'small' : 'large'
+  if (body.extra !== undefined) out.extra = cleanExtra(body.extra)
   if (body.cover !== undefined) {
     const c = str(body.cover, 2000)
     if (c && !isHttpUrl(c)) throw createError({ statusCode: 400, statusMessage: 'Cover image must be a full http(s) URL' })
@@ -55,6 +60,8 @@ export async function savePost(slug: string, fields: Partial<Post>, existing?: P
     cover: '',
     imageStyle: 'large',
     author: '',
+    extra: {},
+    version: 1,
     createdAt: existing?.createdAt || now,
     ...existing,
     ...fields,

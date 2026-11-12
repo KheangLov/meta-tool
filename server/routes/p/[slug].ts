@@ -9,7 +9,6 @@ export default defineEventHandler(async (event) => {
   const e = escapeHtml
   const reqUrl = getRequestURL(event)
   const url = `${reqUrl.origin}/p/${post.slug}${reqUrl.search}`
-  const card = post.imageStyle === 'small' ? 'summary' : 'summary_large_image'
   const date = new Date(post.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
   const paragraphs = post.body
     .split(/\n\s*\n/)
@@ -21,20 +20,10 @@ export default defineEventHandler(async (event) => {
   setHeader(event, 'cache-control', 'no-store, max-age=0')
   setHeader(event, 'content-type', 'text/html; charset=utf-8')
 
-  const meta = [
-    `<meta property="og:type" content="article">`,
-    `<meta property="og:url" content="${e(url)}">`,
-    post.siteName && `<meta property="og:site_name" content="${e(post.siteName)}">`,
-    `<meta property="og:title" content="${e(post.title)}">`,
-    post.excerpt && `<meta property="og:description" content="${e(post.excerpt)}">`,
-    post.excerpt && `<meta name="description" content="${e(post.excerpt)}">`,
-    post.cover && `<meta property="og:image" content="${e(post.cover)}">`,
-    `<meta name="twitter:card" content="${card}">`,
-    `<meta name="twitter:title" content="${e(post.title)}">`,
-    post.excerpt && `<meta name="twitter:description" content="${e(post.excerpt)}">`,
-    post.cover && `<meta name="twitter:image" content="${e(post.cover)}">`,
-    post.author && `<meta name="author" content="${e(post.author)}">`,
-  ].filter(Boolean).join('\n    ')
+  const meta = renderMetaTags({
+    url, siteName: post.siteName, title: post.title, description: post.excerpt, image: post.cover,
+    imageStyle: post.imageStyle, extra: { author: post.author || undefined, ...post.extra }, defaultType: 'article',
+  }).filter((t) => !t.startsWith('<title>')).join('\n    ')
 
   return `<!doctype html>
 <html lang="en">
@@ -58,7 +47,9 @@ export default defineEventHandler(async (event) => {
   <body>
     ${post.siteName ? `<header class="site">${e(post.siteName)}</header>` : ''}
     <main>
-      ${post.cover ? `<img class="cover" src="${e(post.cover)}" alt="">` : ''}
+      ${post.cover ? `<img class="cover" src="${e(post.cover)}" alt="${e(post.extra?.imageAlt || '')}">` : ''}
+      ${post.extra?.videoUrl && /\.(mp4|webm|mov)(\?|$)/i.test(post.extra.videoUrl) ? `<video class="cover" src="${e(post.extra.videoUrl)}" controls playsinline${post.cover ? ` poster="${e(post.cover)}"` : ''}></video>` : ''}
+      ${post.extra?.audioUrl ? `<audio src="${e(post.extra.audioUrl)}" controls style="width:100%;margin-bottom:20px"></audio>` : ''}
       <h1>${e(post.title)}</h1>
       <div class="meta">${post.author ? `${e(post.author)} · ` : ''}${date}</div>
       ${post.excerpt ? `<p class="lead">${e(post.excerpt)}</p>` : ''}

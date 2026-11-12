@@ -7,12 +7,21 @@ export const TEST_IMAGES = [
   { file: 'square-600x600.jpg', w: 600, h: 600, note: 'Square: usually shown as a thumbnail' },
   { file: 'tall-600x900.jpg', w: 600, h: 900, note: 'Portrait: usually shown as a thumbnail' },
   { file: 'small-200x200.jpg', w: 200, h: 200, note: 'Small: thumbnail' },
+  { file: 'video-poster-1200x675.jpg', w: 1200, h: 675, note: 'Poster frame for the test video' },
+]
+
+/** Media files in public/test (for the video/audio fields) */
+export const TEST_MEDIA = [
+  { file: 'video-640x360.mp4', note: '6 s MP4 video, 640×360, ~300 KB' },
+  { file: 'audio-8s.mp3', note: '8 s MP3 tone' },
 ]
 
 interface Sample {
   slug: string
   case: string
   post: { siteName: string; title: string; excerpt: string; body: string; image: string; imageStyle: 'large' | 'small'; author: string }
+  /** Extra tags; videoUrl/audioUrl are file names in public/test */
+  extra?: PreviewExtra
   /** Optional share-link meta that differs from the post (to show a link overriding a page) */
   linkOverride?: { title: string; description: string; image: string }
 }
@@ -37,6 +46,7 @@ export const SAMPLES: Sample[] = [
       excerpt: 'Free delivery in Phnom Penh until 30 November. Tap to see all styles.',
       body: BODY_EN,
     },
+    extra: { ogType: 'article', imageWidth: 1200, imageHeight: 630, imageAlt: 'Blue test banner', locale: 'en_US' },
   },
   {
     slug: 'sample-khmer',
@@ -94,6 +104,31 @@ export const SAMPLES: Sample[] = [
     },
   },
 ]
+
+SAMPLES.push(
+  {
+    slug: 'sample-video',
+    case: 'Video (og:video MP4 + duration)',
+    post: {
+      siteName: 'Video Test', author: 'Test Team', imageStyle: 'large', image: 'video-poster-1200x675.jpg',
+      title: 'Watch: 6-second test clip',
+      excerpt: 'A page with og:video pointing at a small MP4. Check whether Telegram shows a play button or duration.',
+      body: BODY_EN,
+    },
+    extra: { ogType: 'video.other', videoUrl: 'video-640x360.mp4', videoType: 'video/mp4', videoWidth: 640, videoHeight: 360, videoDuration: 6, imageWidth: 1200, imageHeight: 675 },
+  },
+  {
+    slug: 'sample-audio',
+    case: 'Audio (og:audio)',
+    post: {
+      siteName: 'Podcast Test', author: 'Test Team', imageStyle: 'small', image: 'square-600x600.jpg',
+      title: 'Episode 1: an 8-second tone',
+      excerpt: 'A page with og:audio pointing at an MP3.',
+      body: BODY_EN,
+    },
+    extra: { ogType: 'music.song', audioUrl: 'audio-8s.mp3', audioType: 'audio/mpeg' },
+  },
+)
 
 /** One extra share link that points at sample-large but shows different meta */
 export const OVERRIDE_LINK = {

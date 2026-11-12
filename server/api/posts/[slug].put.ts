@@ -4,8 +4,11 @@ export default defineEventHandler(async (event) => {
   requireAdmin(event)
   const before = await getPost(getRouterParam(event, 'slug'))
   if (!before) throw createError({ statusCode: 404, statusMessage: 'Post not found' })
-  const post = await savePost(before.slug, cleanPost((await readBody(event)) || {}), before)
-  const previewChanged = POST_PREVIEW_FIELDS.some((k) => post[k] !== before[k])
+  const fields = cleanPost((await readBody(event)) || {})
+  const candidate = { ...before, ...fields }
+  const previewChanged = POST_PREVIEW_FIELDS.some((k) => candidate[k] !== before[k]) || !sameExtra(candidate.extra, before.extra)
+  if (previewChanged) fields.version = (before.version || 1) + 1
+  const post = await savePost(before.slug, fields, before)
   const syncedLinks = previewChanged ? await syncLinksForPost(post) : []
   return { ...post, previewChanged, syncedLinks }
 })

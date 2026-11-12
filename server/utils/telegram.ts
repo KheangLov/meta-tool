@@ -19,6 +19,13 @@ export interface TgPreview {
   hasLargeMedia?: boolean
   /** Telegram stored an image for this link */
   hasPhoto?: boolean
+  /** Extra things Telegram kept: page type, author, video/audio, embedded player */
+  type?: string
+  author?: string
+  duration?: number
+  embedUrl?: string
+  embedType?: string
+  documentMime?: string
   /** The image Telegram stored, as a data: URL */
   image?: string
 }
@@ -78,7 +85,10 @@ export async function withTelegram<T>(fn: (client: TelegramClient) => Promise<T>
       statusMessage: 'Telegram is not connected. Set NUXT_TELEGRAM_API_ID, NUXT_TELEGRAM_API_HASH and NUXT_TELEGRAM_SESSION (see README).',
     })
   }
-  const client = new TelegramClient(new StringSession(s.session), s.apiId, s.apiHash, {
+  let session: StringSession
+  try { session = new StringSession(s.session) }
+  catch { throw createError({ statusCode: 500, statusMessage: 'NUXT_TELEGRAM_SESSION is not a valid session string. Run `npm run telegram:login` again and copy the whole line.' }) }
+  const client = new TelegramClient(session, s.apiId, s.apiHash, {
     connectionRetries: 2,
     requestRetries: 2,
     autoReconnect: false,
@@ -125,6 +135,12 @@ async function toPreview(client: TelegramClient, media: Api.TypeMessageMedia | u
     description: wp.description || '',
     hasLargeMedia: !!wp.hasLargeMedia,
     hasPhoto: wp.photo instanceof Api.Photo,
+    type: wp.type || '',
+    author: wp.author || '',
+    duration: wp.duration || undefined,
+    embedUrl: wp.embedUrl || '',
+    embedType: wp.embedType || '',
+    documentMime: wp.document instanceof Api.Document ? wp.document.mimeType : '',
     image,
   }
 }

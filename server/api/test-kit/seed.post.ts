@@ -6,6 +6,7 @@ export default defineEventHandler(async (event) => {
   requireAdmin(event)
   const origin = getRequestURL(event).origin
   const img = (f: string) => (f ? `${origin}/test/${f}` : '')
+  const extraFor = (x?: PreviewExtra) => cleanExtra({ ...x, videoUrl: x?.videoUrl && img(x.videoUrl), audioUrl: x?.audioUrl && img(x.audioUrl) })
   const now = new Date().toISOString()
   const created: { case: string; post?: string; link: string }[] = []
 
@@ -14,6 +15,7 @@ export default defineEventHandler(async (event) => {
     await savePost(s.slug, {
       siteName: s.post.siteName, title: s.post.title, excerpt: s.post.excerpt, body: s.post.body,
       cover: img(s.post.image), imageStyle: s.post.imageStyle, author: s.post.author,
+      extra: extraFor(s.extra), version: (existing?.version || 0) + 1,
     }, existing)
 
     const linkSlug = s.slug.replace(/^sample-/, 'test-')
@@ -26,6 +28,7 @@ export default defineEventHandler(async (event) => {
       description: s.post.excerpt,
       image: img(s.post.image),
       imageStyle: s.post.imageStyle,
+      extra: cleanExtra({ author: s.post.author, ...extraFor(s.extra) }),
       postSlug: s.slug,
       syncWithPost: true,
       version: (old?.version || 0) + 1,

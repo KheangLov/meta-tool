@@ -30,6 +30,7 @@ export interface LinkMeta {
   version: number
   postSlug?: string
   syncWithPost?: boolean
+  extra?: PreviewExtra
   createdAt: string
   updatedAt: string
 }
@@ -48,10 +49,56 @@ export interface Post {
   cover: string
   imageStyle: 'large' | 'small'
   author: string
+  extra?: PreviewExtra
+  version?: number
   createdAt: string
   updatedAt: string
 }
 
-export function postUrl(slug: string) {
-  return `${location.origin}/p/${slug}`
+/** Same shape as server/utils/preview.ts */
+export interface PreviewExtra {
+  ogType?: string
+  author?: string
+  publishedTime?: string
+  locale?: string
+  imageAlt?: string
+  imageWidth?: number
+  imageHeight?: number
+  videoUrl?: string
+  videoType?: string
+  videoWidth?: number
+  videoHeight?: number
+  videoDuration?: number
+  audioUrl?: string
+  audioType?: string
+  tgChannel?: string
+}
+
+export function postUrl(slug: string, version?: number) {
+  return `${location.origin}/p/${slug}${version && version > 1 ? `?v=${version}` : ''}`
+}
+
+export interface SendOptions { size: 'auto' | 'large' | 'small'; position: 'below' | 'above'; disablePreview: boolean; silent: boolean; parseMode: 'plain' | 'html' }
+
+/** Message options + text, remembered in this browser so they're the same next time */
+export function useSendSettings() {
+  const KEY = 'lps-send-settings'
+  let saved: any = {}
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') } catch {}
+  const options = ref<SendOptions>({ size: 'auto', position: 'below', disablePreview: false, silent: false, parseMode: 'plain', ...saved.options })
+  const template = ref<string>(saved.template ?? '{link}')
+  watch([options, template], () => {
+    try { localStorage.setItem(KEY, JSON.stringify({ options: options.value, template: template.value })) } catch {}
+  }, { deep: true })
+  return { options, template }
+}
+
+/** What the message will say, for the mock (same rules as the server) */
+export function renderMessage(template: string, t: { url: string; title: string; description: string }, html: boolean) {
+  const esc = (s: string) => (html ? s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : s)
+  return (template || '{link}').replaceAll('{link}', t.url).replaceAll('{title}', esc(t.title)).replaceAll('{description}', esc(t.description))
+}
+
+export function mockImageStyle(size: SendOptions['size'], own: 'large' | 'small') {
+  return size === 'auto' ? own : size
 }

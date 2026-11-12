@@ -10,7 +10,7 @@ const api = useApi()
 const slug = String(route.params.slug)
 
 const link = ref<LinkMeta | null>(null)
-const draft = reactive({ targetUrl: '', siteName: '', title: '', description: '', image: '', imageStyle: 'large' as 'large' | 'small' })
+const draft = reactive({ targetUrl: '', siteName: '', title: '', description: '', image: '', imageStyle: 'large' as 'large' | 'small', extra: {} as PreviewExtra })
 const theme = ref<'light' | 'dark'>('light')
 const error = ref('')
 const notice = ref('')
@@ -26,6 +26,9 @@ const copied = ref('')
 interface TgPreview { state: 'ready' | 'pending' | 'empty' | 'none'; url?: string; siteName?: string; title?: string; description?: string; hasLargeMedia?: boolean; image?: string }
 
 const tgReady = ref(false)
+const tgBot = ref(false)
+const { options: sendOpts, template: sendTemplate } = useSendSettings()
+const sender = ref<{ updateAll: () => Promise<boolean>; count: number } | null>(null)
 const autoRefresh = ref(true)
 const withContent = ref(false)
 const tgBusy = ref<'' | 'refresh' | 'cached'>('')
@@ -35,7 +38,11 @@ const syncDraft = ref(false)
 const tgCached = ref<TgPreview | null>(null)
 
 onMounted(async () => {
-  try { tgReady.value = !!(await $fetch<{ telegram: boolean }>('/api/health')).telegram } catch {}
+  try {
+    const h = await $fetch<{ telegram: boolean; telegramBot: boolean }>('/api/health')
+    tgReady.value = !!h.telegram
+    tgBot.value = !!h.telegramBot
+  } catch {}
 })
 
 /** Links people may already have posted: the plain link and the current ?v= link */
@@ -56,7 +63,7 @@ watch(syncDraft, async (on) => {
   if (!on || !link.value?.postSlug || link.value.syncWithPost) return
   try {
     const p = await api<Post>(`/api/posts/${link.value.postSlug}`)
-    Object.assign(draft, { siteName: p.siteName, title: p.title, description: p.excerpt, image: p.cover, imageStyle: p.imageStyle })
+    Object.assign(draft, { siteName: p.siteName, title: p.title, description: p.excerpt, image: p.cover, imageStyle: p.imageStyle, extra: { ...(p.extra || {}) } })
   } catch (e) { error.value = errMsg(e) }
 })
 
@@ -72,6 +79,7 @@ const FIELDS = ['targetUrl', 'siteName', 'title', 'description', 'image', 'image
 
 function fill(l: LinkMeta) {
   for (const k of FIELDS) (draft as any)[k] = l[k]
+  draft.extra = { ...(l.extra || {}) }
   syncDraft.value = !!l.syncWithPost
 }
 
@@ -83,7 +91,12 @@ async function load() {
 }
 onMounted(load)
 
-const dirty = computed(() => !!link.value && (FIELDS.some((k) => (draft as any)[k] !== link.value![k]) || syncDraft.value !== !!link.value.syncWithPost))
+const sameJson = (a: unknown, b: unknown) => JSON.stringify(a || {}) === JSON.stringify(b || {})
+const dirty = computed(() => !!link.value && (
+  FIELDS.some((k) => (draft as any)[k] !== link.value![k]) || syncDraft.value !== !!link.value.syncWithPost || !sameJson(draft.extra, link.value.extra)
+))
+
+const mockText = computed(() => renderMessage(sendTemplate.value, { url: currentShare.value, title: draft.title, description: draft.description }, sendOpts.value.parseMode === 'html'))
 const currentShare = computed(() => (link.value ? shareUrl(link.value) : ''))
 const baseShare = computed(() => (link.value ? shareUrl(link.value, false) : ''))
 
@@ -98,12 +111,13 @@ async function save() {
     notice.value = res.previewChanged
       ? `Saved as version ${res.version}.` + (tgReady.value && autoRefresh.value ? ' Updating Telegram…' : ` New link with the latest preview: ${shareUrl(res)}`)
       : 'Saved.'
-    if (res.previewChanged && tgReady.value && autoRefresh.value) {
+    if (res.previewChanged && autoRefresh.value && (tgReady.value || sender.value?.count)) {
       saving.value = false
-      const ok = await refreshTelegram()
-      notice.value = ok
-        ? `Saved as version ${res.version}. Telegram now shows the latest preview.`
-        : `Saved as version ${res.version}. Telegram may still show the old preview for some links. See "Update in Telegram".`
+      const okRefresh = tgReady.value ? await refreshTelegram() : true
+      const okSent = sender.value?.count ? await sender.value.updateAll() : true
+      notice.value = okRefresh && okSent
+        ? `Saved as version ${res.version}. Telegram now shows the latest preview${sender.value?.count ? ', and your sent messages were updated' : ''}.`
+        : `Saved as version ${res.version}. Some Telegram updates didn't finish. See the details on the right.`
     }
   } catch (e) { error.value = errMsg(e) }
   finally { saving.value = false }
@@ -209,6 +223,7 @@ const imageWarning = computed(() => {
         </div>
       </div>
 
+      <PreviewExtras v-model="draft.extra" :image-size="imageInfo && !imageInfo.error ? imageInfo : null" />
       </fieldset>
 
       <div class="row actions">
@@ -217,7 +232,7 @@ const imageWarning = computed(() => {
         <span class="grow" />
         <button class="btn danger ghost" @click="remove">Delete</button>
       </div>
-      <label v-if="tgReady" class="check"><input v-model="autoRefresh" type="checkbox" /> Refresh Telegram automatically after saving</label>
+      <label v-if="tgReady || tgBot" class="check"><input v-model="autoRefresh" type="checkbox" /> Update Telegram automatically after saving (refresh previews + edit sent messages)</label>
       <p v-if="notice" class="notice">{{ notice }}</p>
       <p v-if="error" class="error">{{ error }}</p>
     </section>
@@ -235,10 +250,16 @@ const imageWarning = computed(() => {
         <TelegramPreview
           :theme="theme" :url="currentShare"
           :site-name="draft.siteName" :title="draft.title" :description="draft.description"
-          :image="draft.image" :image-style="draft.imageStyle"
+          :image="draft.image" :image-style="mockImageStyle(sendOpts.size, draft.imageStyle)"
+          :text="mockText" :html="sendOpts.parseMode === 'html'" :position="sendOpts.position" :no-preview="sendOpts.disablePreview"
+          :video="!!draft.extra.videoUrl" :duration="draft.extra.videoDuration" :audio="!!draft.extra.audioUrl"
           @image-info="imageInfo = $event"
         />
         <p class="muted small">This is a close copy of Telegram's layout. Telegram makes the final choice, for example it may show a large image as a small thumbnail.</p>
+        <TelegramSend
+          ref="sender" v-model:options="sendOpts" v-model:template="sendTemplate"
+          :owner="`link:${link.slug}`" :latest-url="currentShare" :account="tgReady" :bot="tgBot" :dirty="dirty"
+        />
       </div>
 
       <div class="card">

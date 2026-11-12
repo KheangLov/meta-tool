@@ -4,7 +4,7 @@ const api = useApi()
 const slug = String(route.params.slug)
 
 const post = ref<Post | null>(null)
-const draft = reactive({ siteName: '', title: '', excerpt: '', body: '', cover: '', imageStyle: 'large' as 'large' | 'small', author: '' })
+const draft = reactive({ siteName: '', title: '', excerpt: '', body: '', cover: '', imageStyle: 'large' as 'large' | 'small', author: '', extra: {} as PreviewExtra })
 const FIELDS = ['siteName', 'title', 'excerpt', 'body', 'cover', 'imageStyle', 'author'] as const
 const theme = ref<'light' | 'dark'>('light')
 const error = ref('')
@@ -12,6 +12,10 @@ const notice = ref('')
 const saving = ref(false)
 const making = ref(false)
 const tgReady = ref(false)
+const tgBot = ref(false)
+const imageInfo = ref<{ width: number; height: number; error: boolean } | null>(null)
+const { options: sendOpts, template: sendTemplate } = useSendSettings()
+const sender = ref<{ updateAll: () => Promise<boolean>; count: number } | null>(null)
 const autoRefresh = ref(true)
 const copied = ref(false)
 const links = ref<LinkMeta[]>([])
@@ -24,20 +28,33 @@ async function loadLinks() {
 /** Every URL that shows this post's preview: the post itself and each synced share link (plain + newest ?v=) */
 const affectedUrls = computed(() => [
   url.value,
+  ...(latestUrl.value !== url.value ? [latestUrl.value] : []),
   ...links.value.filter((l) => l.syncWithPost).flatMap((l) => [shareUrl(l, false), shareUrl(l)]),
 ])
 
-function fill(p: Post) { for (const k of FIELDS) (draft as any)[k] = p[k] }
+function fill(p: Post) {
+  for (const k of FIELDS) (draft as any)[k] = p[k]
+  draft.extra = { ...(p.extra || {}) }
+}
 
 onMounted(async () => {
   try { post.value = await api<Post>(`/api/posts/${slug}`); fill(post.value) }
   catch (e) { error.value = errMsg(e) }
-  try { tgReady.value = !!(await $fetch<{ telegram: boolean }>('/api/health')).telegram } catch {}
+  try {
+    const h = await $fetch<{ telegram: boolean; telegramBot: boolean }>('/api/health')
+    tgReady.value = !!h.telegram
+    tgBot.value = !!h.telegramBot
+  } catch {}
   loadLinks()
 })
 
-const dirty = computed(() => !!post.value && FIELDS.some((k) => (draft as any)[k] !== post.value![k]))
+const dirty = computed(() => !!post.value && (
+  FIELDS.some((k) => (draft as any)[k] !== post.value![k]) || JSON.stringify(draft.extra || {}) !== JSON.stringify(post.value.extra || {})
+))
 const url = computed(() => postUrl(slug))
+/** Newest versioned URL (what the tool sends, so Telegram always fetches the latest) */
+const latestUrl = computed(() => postUrl(slug, post.value?.version))
+const mockText = computed(() => renderMessage(sendTemplate.value, { url: latestUrl.value, title: draft.title, description: draft.excerpt }, sendOpts.value.parseMode === 'html'))
 
 async function save() {
   saving.value = true
@@ -50,12 +67,15 @@ async function save() {
     if (!res.previewChanged) { notice.value = 'Saved.'; return }
     const n = res.syncedLinks.length
     const linkNote = n ? ` ${n} share link${n > 1 ? 's were' : ' was'} updated too.` : ''
-    if (tgReady.value && autoRefresh.value) {
+    if (autoRefresh.value && (tgReady.value || sender.value?.count)) {
       notice.value = `Saved.${linkNote} Updating Telegram…`
       saving.value = false
-      const rows = await sync.value?.run(affectedUrls.value)
-      const ok = !!rows?.every((r) => r.state === 'match' || r.state === 'unknown')
-      notice.value = ok ? `Saved.${linkNote} Telegram now shows the latest preview.` : `Saved.${linkNote} Telegram may still show the old preview for some links. See below.`
+      const rows = tgReady.value ? await sync.value?.run(affectedUrls.value) : []
+      const okRefresh = !rows || rows.every((r) => r.state === 'match' || r.state === 'unknown')
+      const okSent = sender.value?.count ? await sender.value.updateAll() : true
+      notice.value = okRefresh && okSent
+        ? `Saved.${linkNote} Telegram now shows the latest preview${sender.value?.count ? ', and your sent messages were updated' : ''}.`
+        : `Saved.${linkNote} Some Telegram updates didn't finish. See the details on the right.`
     } else {
       notice.value = `Saved.${linkNote} Links already posted in Telegram keep their old preview until refreshed. The newest ?v= links below always show the latest.`
     }
@@ -138,6 +158,8 @@ async function remove() {
         <span>Author</span>
         <input v-model="draft.author" class="input" />
       </label>
+      <PreviewExtras v-model="draft.extra" :image-size="imageInfo && !imageInfo.error ? imageInfo : null" />
+
       <label class="field">
         <span>Body <em>(blank line = new paragraph)</em></span>
         <textarea v-model="draft.body" class="input" rows="8" />
@@ -149,7 +171,7 @@ async function remove() {
         <span class="grow" />
         <button class="btn danger ghost" @click="remove">Delete</button>
       </div>
-      <label v-if="tgReady" class="check"><input v-model="autoRefresh" type="checkbox" /> Refresh Telegram automatically after saving</label>
+      <label v-if="tgReady || tgBot" class="check"><input v-model="autoRefresh" type="checkbox" /> Update Telegram automatically after saving (refresh previews + edit sent messages)</label>
       <p v-if="notice" class="notice">{{ notice }}</p>
       <p v-if="error" class="error">{{ error }}</p>
     </section>
@@ -164,8 +186,15 @@ async function remove() {
           </div>
         </div>
         <TelegramPreview
-          :theme="theme" :url="url" :site-name="draft.siteName" :title="draft.title"
-          :description="draft.excerpt" :image="draft.cover" :image-style="draft.imageStyle"
+          :theme="theme" :url="latestUrl" :site-name="draft.siteName" :title="draft.title"
+          :description="draft.excerpt" :image="draft.cover" :image-style="mockImageStyle(sendOpts.size, draft.imageStyle)"
+          :text="mockText" :html="sendOpts.parseMode === 'html'" :position="sendOpts.position" :no-preview="sendOpts.disablePreview"
+          :video="!!draft.extra.videoUrl" :duration="draft.extra.videoDuration" :audio="!!draft.extra.audioUrl"
+          @image-info="imageInfo = $event"
+        />
+        <TelegramSend
+          ref="sender" v-model:options="sendOpts" v-model:template="sendTemplate"
+          :owner="`post:${slug}`" :latest-url="latestUrl" :account="tgReady" :bot="tgBot" :dirty="dirty"
         />
       </div>
 

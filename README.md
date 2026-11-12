@@ -16,6 +16,42 @@ Make short share links whose **Telegram preview** (site name, title, description
 - **Posts** (`/posts` in the editor) are simple article pages hosted by the tool at `/p/<slug>`, with their own preview tags. Share them directly, or click *Create a share link for this post*.
 - **Test kit** (`/test-kit`) has one button that creates 6 sample posts and matching share links (`/s/test-large`, `/s/test-khmer`, `/s/test-thumbnail`, `/s/test-no-image`, `/s/test-long-text`, `/s/test-emoji`), plus `/s/test-override`. It also lists the test images in `public/test/` (1200×630 in three colors, 2400×1260, square, portrait and small). Both editors have a *Use a test image…* menu.
 
+## Everything you can customise in a Telegram preview
+
+**On the page (Open Graph tags, read by Telegram's crawler).** These are in each editor, plus *Advanced*:
+
+| Field | Tag(s) |
+|---|---|
+| Site name, title, description, image | `og:site_name`, `og:title`, `og:description`, `og:image` (+ Twitter equivalents) |
+| Large image / small thumbnail | `twitter:card` = `summary_large_image` / `summary` |
+| Page type | `og:type` (website, article, video, song, profile, book) |
+| Author, published time, language | `article:author`, `author`, `article:published_time`, `og:locale` |
+| Image size and alt text | `og:image:width`, `og:image:height`, `og:image:alt` |
+| Video | `og:video` (+ `secure_url`, `type`, `width`, `height`), `video:duration`; a player page also sets `twitter:player` |
+| Audio | `og:audio`, `og:audio:type` |
+| Your channel | `telegram:channel` (used by Instant View) |
+
+Telegram stores all of these with the preview, but each Telegram app decides what to show. *Show Telegram's saved preview* lists what Telegram actually kept (type, author, duration, embedded player, media size).
+
+**In the message (set when the message is sent).** These are under *Message & preview options*:
+
+- **Larger / smaller media.** Forces the big image or the thumbnail, whatever the page says.
+- **Preview above or below the text.**
+- **Message text** with `{link}`, `{title}`, `{description}`. Leave out `{link}` to hide the address while keeping the card.
+- **HTML formatting:** bold, italic, underline, strike, `code`, spoiler, quote, and links with your own text.
+- **No preview** and **send silently**.
+
+Telegram only applies these to a message that is actually sent, so the tool can **send the message for you**. It sends through your connected account (Saved Messages, any chat or channel you can post in) or through a bot. Messages sent this way are listed under *Sent from this tool*. After you save, the tool **edits them to point at the newest `?v=` link**, so even messages already posted in chats show the new preview.
+
+### Connect a bot (optional, for channels and groups)
+
+1. In Telegram, open @BotFather, send `/newbot`, and copy the token.
+2. Add the bot as an **admin** of your channel or group, with permission to post and edit messages.
+3. In Vercel, add `NUXT_TELEGRAM_BOT_TOKEN=<token>` and redeploy.
+4. In the editor, choose **Bot**, type `@yourchannel` (or a numeric chat id), and send.
+
+A bot can't post to Saved Messages, and it can only message a person who has started it. Use *My account* for those.
+
 ## Image uploads
 
 Every image field has an **Upload image** button. You can also drag a file onto it, or click it and paste (Ctrl/⌘+V) a copied image.
@@ -99,6 +135,9 @@ Notes:
 | GET / POST | `/api/posts` | POST: `{ title, slug?, siteName?, excerpt?, body?, cover?, imageStyle?, author? }` |
 | GET / PUT / DELETE | `/api/posts/:slug` | PUT: any post fields |
 | POST | `/api/uploads` | multipart form field `file` → `{ url }` |
+| POST | `/api/telegram/send` | `{ owner: 'link:<slug>'\|'post:<slug>', via: 'account'\|'bot', chat, template, options: { size, position, disablePreview, silent, parseMode } }` |
+| GET / DELETE | `/api/telegram/sent?owner=` | List / forget (`&id=…&deleteMessage=1` also deletes in Telegram) |
+| POST | `/api/telegram/update-sent` | `{ owner, ids? }`: edit sent messages to the newest preview |
 | POST | `/api/test-kit/seed` | Creates or resets the sample posts and links |
 | GET | `/api/telegram/status` | Whether Telegram is connected, and which account |
 | POST | `/api/telegram/preview` | `{ url }`: the preview Telegram has saved right now |

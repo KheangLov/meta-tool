@@ -13,6 +13,8 @@ export interface LinkMeta {
   imageStyle: ImageStyle
   /** Bumped every time preview fields change; used as ?v= to force a fresh Telegram preview */
   version: number
+  /** Extra Open Graph / Telegram tags (type, author, video, …) */
+  extra?: PreviewExtra
   /** Set when the link points at one of our posts */
   postSlug?: string
   /** When true, the link always copies its preview from the post (updated whenever the post is saved) */
@@ -95,13 +97,19 @@ export function cleanFields(body: any, partial = false) {
   if (body.title !== undefined) out.title = str(body.title, 500)
   if (body.description !== undefined) out.description = str(body.description, 2000)
   if (body.imageStyle !== undefined) out.imageStyle = body.imageStyle === 'small' ? 'small' : 'large'
+  if (body.extra !== undefined) out.extra = cleanExtra(body.extra)
   return out
 }
 
 export const PREVIEW_FIELDS = ['siteName', 'title', 'description', 'image', 'imageStyle'] as const
 
-export function previewFromPost(post: Post): Pick<LinkMeta, (typeof PREVIEW_FIELDS)[number]> {
-  return { siteName: post.siteName, title: post.title, description: post.excerpt, image: post.cover, imageStyle: post.imageStyle }
+export function previewFromPost(post: Post): Pick<LinkMeta, (typeof PREVIEW_FIELDS)[number] | 'extra'> {
+  return { siteName: post.siteName, title: post.title, description: post.excerpt, image: post.cover, imageStyle: post.imageStyle, extra: cleanExtra({ author: post.author, ...post.extra }) }
+}
+
+/** True when anything Telegram would show is different */
+export function linkPreviewDiffers(a: LinkMeta, b: LinkMeta) {
+  return PREVIEW_FIELDS.some((k) => a[k] !== b[k]) || !sameExtra(a.extra, b.extra)
 }
 
 /** Copies a post's preview into every share link that follows it. Returns the links whose preview changed. */
@@ -110,7 +118,7 @@ export async function syncLinksForPost(post: Post) {
   for (const link of await listLinks()) {
     if (link.postSlug !== post.slug || !link.syncWithPost) continue
     const next = { ...link, ...previewFromPost(post) }
-    if (PREVIEW_FIELDS.some((k) => next[k] !== link[k])) {
+    if (linkPreviewDiffers(next, link)) {
       next.version = link.version + 1
       next.updatedAt = new Date().toISOString()
       await linkStore().setItem(link.slug, next)

@@ -21,23 +21,7 @@ export default defineEventHandler(async (event) => {
   const reqUrl = getRequestURL(event)
   const shareUrl = `${reqUrl.origin}/s/${link.slug}${query.v ? `?v=${encodeURIComponent(String(query.v))}` : ''}`
   const e = escapeHtml
-  const card = link.imageStyle === 'small' ? 'summary' : 'summary_large_image'
-
-  const tags = [
-    `<meta charset="utf-8">`,
-    `<title>${e(link.title)}</title>`,
-    link.description && `<meta name="description" content="${e(link.description)}">`,
-    `<meta property="og:type" content="website">`,
-    `<meta property="og:url" content="${e(shareUrl)}">`,
-    link.siteName && `<meta property="og:site_name" content="${e(link.siteName)}">`,
-    `<meta property="og:title" content="${e(link.title)}">`,
-    link.description && `<meta property="og:description" content="${e(link.description)}">`,
-    link.image && `<meta property="og:image" content="${e(link.image)}">`,
-    `<meta name="twitter:card" content="${card}">`,
-    `<meta name="twitter:title" content="${e(link.title)}">`,
-    link.description && `<meta name="twitter:description" content="${e(link.description)}">`,
-    link.image && `<meta name="twitter:image" content="${e(link.image)}">`,
-  ].filter(Boolean).join('\n    ')
+  const tags = [`<meta charset="utf-8">`, ...renderMetaTags({ ...link, url: shareUrl })].join('\n    ')
 
   setHeader(event, 'content-type', 'text/html; charset=utf-8')
   return `<!doctype html>
