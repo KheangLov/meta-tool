@@ -5,5 +5,6 @@ export default defineEventHandler((event) => {
     storage: hasRedis ? 'redis' : import.meta.dev ? 'local-files' : 'memory',
     adminTokenSet: !!useRuntimeConfig(event).adminToken,
     telegram: telegramConfigured(),
+    uploads: blobConfigured() ? 'blob' : hasRedis ? 'redis' : import.meta.dev ? 'local-files' : 'memory',
   }
 })

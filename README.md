@@ -16,6 +16,15 @@ Make short share links whose **Telegram preview** (site name, title, description
 - **Posts** (`/posts` in the editor) are simple article pages hosted by the tool at `/p/<slug>`, with their own preview tags. Share them directly, or click *Create a share link for this post*.
 - **Test kit** (`/test-kit`) has one button that creates 6 sample posts and matching share links (`/s/test-large`, `/s/test-khmer`, `/s/test-thumbnail`, `/s/test-no-image`, `/s/test-long-text`, `/s/test-emoji`), plus `/s/test-override`. It also lists the test images in `public/test/` (1200×630 in three colors, 2400×1260, square, portrait and small). Both editors have a *Use a test image…* menu.
 
+## Image uploads
+
+Every image field has an **Upload image** button. You can also drag a file onto it, or click it and paste (Ctrl/⌘+V) a copied image.
+
+- JPEG, PNG, WebP and GIF are accepted. The server checks the real file type, not just the file name.
+- Photos larger than 2400 px or 3.8 MB are resized in the browser to a JPEG first, so they fit Vercel's 4.5 MB upload limit.
+- **Recommended:** in Vercel go to **Storage → Create → Blob**, choose **public** access, and connect it to the project. It adds `BLOB_READ_WRITE_TOKEN`. Uploads then go to Vercel Blob, which serves them from a fast public CDN URL.
+- Without Blob, or if a Blob upload fails, images are saved in the app's own storage (Upstash Redis) and served from `/u/<name>`. If neither is connected, uploads are kept in memory and disappear when the server restarts.
+
 ## How the tool keeps previews up to date after you save
 
 1. **Your server always serves the latest.** `/s/…` and `/p/…` are never cached (`Cache-Control: no-store`), so Telegram's crawler always reads what you last saved.
@@ -89,6 +98,7 @@ Notes:
 | GET | `/api/inspect?url=` | Fetches a URL as TelegramBot and returns the parsed meta tags |
 | GET / POST | `/api/posts` | POST: `{ title, slug?, siteName?, excerpt?, body?, cover?, imageStyle?, author? }` |
 | GET / PUT / DELETE | `/api/posts/:slug` | PUT: any post fields |
+| POST | `/api/uploads` | multipart form field `file` → `{ url }` |
 | POST | `/api/test-kit/seed` | Creates or resets the sample posts and links |
 | GET | `/api/telegram/status` | Whether Telegram is connected, and which account |
 | POST | `/api/telegram/preview` | `{ url }`: the preview Telegram has saved right now |

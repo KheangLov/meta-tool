@@ -15,10 +15,12 @@ export default defineNitroPlugin(() => {
   if (url && token) {
     storage.mount('links', upstashDriver({ url, token, base: 'lps:links' }))
     storage.mount('posts', upstashDriver({ url, token, base: 'lps:posts' }))
+    storage.mount('uploads', upstashDriver({ url, token, base: 'lps:uploads' }))
     console.info('[storage] Using Upstash Redis')
   } else if (import.meta.dev) {
     storage.mount('links', fsDriver({ base: './.data/links' }))
     storage.mount('posts', fsDriver({ base: './.data/posts' }))
+    storage.mount('uploads', fsDriver({ base: './.data/uploads' }))
     console.info('[storage] Using local .data/links folder')
   } else {
     console.warn('[storage] No Redis configured — using in-memory storage. Data will be lost on cold start.')

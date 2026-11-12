@@ -197,6 +197,7 @@ const imageWarning = computed(() => {
           <input v-model="draft.image" class="input grow" type="url" placeholder="https://…/cover-1200x630.jpg" />
           <TestImagePicker @pick="draft.image = $event" />
         </div>
+        <ImageUpload @uploaded="draft.image = $event" />
         <small v-if="imageWarning" class="hint" :class="{ warn: imageWarning.includes('Telegram') || imageWarning.includes('not') }">{{ imageWarning }}</small>
       </div>
 

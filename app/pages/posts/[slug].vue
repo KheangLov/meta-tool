@@ -125,6 +125,7 @@ async function remove() {
           <input v-model="draft.cover" class="input grow" type="url" placeholder="https://…/cover-1200x630.jpg" />
           <TestImagePicker @pick="draft.cover = $event" />
         </div>
+        <ImageUpload @uploaded="draft.cover = $event" />
       </div>
       <div class="field">
         <span>Image style</span>
