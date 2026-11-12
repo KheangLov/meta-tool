@@ -1,0 +1,25 @@
+{
+  "name": "tg-preview",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "telegram:login": "node scripts/telegram-login.mjs",
+    "typecheck": "nuxt typecheck"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.35.0",
+    "nuxt": "^4.6.4",
+    "telegram": "^2.26.22",
+    "vue": "latest",
+    "vue-router": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^6.0.3",
+    "vue-tsc": "^3.3.14"
+  }
+}

@@ -1,0 +1,101 @@
+# Link Preview Studio (Telegram first)
+
+Make short share links whose **Telegram preview** (site name, title, description, image) you control and can change at any time.
+
+- `/s/<slug>` is the link you share.
+  - **Telegram's crawler** (and Facebook, WhatsApp and similar) gets a small HTML page with your Open Graph tags.
+  - **People** who tap it are sent (302) to your target URL.
+  - Add `?preview` to view the crawler HTML in a browser.
+- The editor shows a **live Telegram-style preview** (light and dark) as you type.
+- **Check live** fetches your link the way `TelegramBot` does and shows what it reads.
+- Every saved change adds a new `?v=` number. Post `…/s/promo?v=3` and Telegram treats it as a new link, so it shows the new preview straight away.
+- **Refresh in Telegram (built in):** the tool sends your link to Telegram's official [@WebpageBot](https://t.me/WebpageBot) for you. It can also press "Update with content", and it shows the preview Telegram really has saved, image included. Turn on *Refresh Telegram automatically after saving* and every save updates Telegram too. This needs a connected Telegram account (see below).
+
+## Run locally
+
+```bash
+npm install
+npm run dev            # http://localhost:3000. Data is saved in .data/ and no token is needed in dev.
+```
+
+Telegram can't reach `localhost`. To test real previews, deploy it (below) or use a tunnel such as `cloudflared tunnel --url http://localhost:3000`.
+
+## Deploy to Vercel
+
+1. Push this folder to a GitHub repo, then go to **vercel.com → Add New → Project** and import it. Vercel detects Nuxt on its own, so you don't need to change any build settings.
+2. Under **Settings → Environment Variables**, add
+   `NUXT_ADMIN_TOKEN` = a long random string. This is the password for the editor.
+3. Under **Storage → Create / Connect → Upstash (Redis)**, connect it to the project. It adds `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_*`), and the app picks either up.
+   *If you skip this, the app still runs but keeps data in memory, so links disappear when the function restarts. The header shows "Memory storage" when this is happening.*
+4. **Redeploy**. Open your `https://<project>.vercel.app`, click **🔑 Token** and paste the token.
+
+CLI alternative: `npx vercel` then `npx vercel --prod`.
+
+> ⚠️ **Test on the production URL.** Vercel turns on *Deployment Protection* for preview deployments by default. Telegram's crawler would get a login page there, so you'd see no preview.
+
+## Connect Telegram (for the built-in @WebpageBot refresh)
+
+Telegram bots can't message other bots, so the tool talks to @WebpageBot as a **normal Telegram user account**, using the official MTProto API (through the [GramJS](https://gram.js.org) library). You set this up once:
+
+1. **Use a separate Telegram account** for this, not your personal one. The tool sends messages from it.
+2. Go to <https://my.telegram.org>, sign in with that account, open **API development tools**, create an app (any name), and copy its `api_id` and `api_hash`.
+3. On your own computer, inside this project, run:
+   ```bash
+   npm install
+   npm run telegram:login
+   ```
+   Enter the api_id and api_hash, then the phone number, the login code Telegram sends you, and your 2-step password if you have one. The script prints three lines.
+4. Add those three variables in **Vercel → Settings → Environment Variables** and redeploy:
+   ```
+   NUXT_TELEGRAM_API_ID=…
+   NUXT_TELEGRAM_API_HASH=…
+   NUXT_TELEGRAM_SESSION=…   (long string, keep it secret)
+   ```
+5. The editor now shows **Refresh in Telegram** and **Show Telegram's saved preview**.
+
+Notes:
+- The session string gives full access to that Telegram account. Store it only in Vercel's environment variables, and never commit it to git.
+- If you log that session out (Telegram → Settings → Devices), run `npm run telegram:login` again.
+- Telegram rate-limits accounts that send a lot of messages. If that happens the tool shows "try again in N s". Normal editing use stays well under the limit.
+
+## How to test the Telegram flow
+
+1. Create a link and set a title, description and a 1200×630 image (it must be a public https URL).
+2. Copy the link and paste it into Telegram (Saved Messages works well). The preview should match.
+3. Change the title and click **Save**. The version goes up.
+4. Paste the new `?v=` link and you'll see the new preview. Or send the original link to @WebpageBot, then post it again.
+
+## API (all calls need the `x-admin-token` header)
+
+| Method | Path | Body / query |
+|---|---|---|
+| GET | `/api/links` | – |
+| POST | `/api/links` | `{ targetUrl, slug?, importMeta?, title?, description?, image?, siteName?, imageStyle? }` |
+| GET / PUT / DELETE | `/api/links/:slug` | PUT: any editable fields |
+| GET | `/api/inspect?url=` | Fetches a URL as TelegramBot and returns the parsed meta tags |
+| GET | `/api/telegram/status` | Whether Telegram is connected, and which account |
+| POST | `/api/telegram/preview` | `{ url }`: the preview Telegram has saved right now |
+| POST | `/api/telegram/refresh` | `{ url }` or `{ urls: [...] }` (max 5), `withContent?`: refresh with @WebpageBot |
+
+## Project layout
+
+```
+app/                       Editor UI (Vue, runs in the browser)
+  components/TelegramPreview.vue   Telegram-style preview card
+  pages/index.vue          Create and list links
+  pages/links/[slug].vue   Editor, preview and "Update in Telegram" panel
+server/
+  routes/s/[slug].ts       The public share link (meta HTML for bots, redirect for people)
+  api/…                    Create, read, update and delete links + inspect
+  api/telegram/…           Refresh with @WebpageBot, and read Telegram's saved preview
+  plugins/storage.ts       Chooses Upstash Redis, local files or memory
+  utils/telegram.ts        Telegram user-account client (GramJS)
+  utils/                   Validation, auth, meta-tag scraper
+scripts/telegram-login.mjs One-time Telegram login that prints the session string
+```
+
+## Next steps (ideas)
+
+- Upload images directly (Vercel Blob) instead of pasting a URL
+- Facebook / Messenger: preview tab + one-click re-scrape through the Graph API (`POST /?id=<url>&scrape=true`)
+- Click counts per link
