@@ -3,8 +3,8 @@
  * so you can share /p/<slug> directly or point a /s/ share link at it.
  */
 export default defineEventHandler(async (event) => {
-  const post = await getPost(getRouterParam(event, 'slug'))
-  if (!post) throw createError({ statusCode: 404, statusMessage: 'Post not found' })
+  const post = await findPost(getRouterParam(event, 'slug'), getRequestURL(event).origin)
+  if (!post) return notFoundPage(event, 'post')
 
   const e = escapeHtml
   const reqUrl = getRequestURL(event)

@@ -1,7 +1,7 @@
 export default defineEventHandler(async (event) => {
   requireAdmin(event)
   const slug = getRouterParam(event, 'slug')
-  const link = await getLink(slug)
+  const link = await findLink(slug, getRequestURL(event).origin)
   if (!link) throw createError({ statusCode: 404, statusMessage: 'Link not found' })
 
   const body = (await readBody(event)) || {}
@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   if (body.syncWithPost !== undefined) next.syncWithPost = !!body.syncWithPost && !!link.postSlug
   if (next.syncWithPost && next.postSlug) {
     // A synced link always shows the post's current preview
-    const post = await getPost(next.postSlug)
+    const post = await findPost(next.postSlug, getRequestURL(event).origin)
     if (post) Object.assign(next, previewFromPost(post))
     else next.syncWithPost = false
   }

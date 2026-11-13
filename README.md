@@ -111,8 +111,13 @@ Telegram can't reach `localhost`. To test real previews, deploy it (below) or us
 1. Push this folder to a GitHub repo, then go to **vercel.com → Add New → Project** and import it. Vercel detects Nuxt on its own, so you don't need to change any build settings.
 2. Under **Settings → Environment Variables**, add
    `NUXT_ADMIN_TOKEN` = a long random string. This is the password for the editor.
-3. Under **Storage → Create / Connect → Upstash (Redis)**, connect it to the project. It adds `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (or `KV_REST_API_*`), and the app picks either up.
-   *If you skip this, the app still runs but keeps data in memory, so links disappear when the function restarts. The header shows "Memory storage" when this is happening.*
+3. Under **Storage → Create Database → Upstash for Redis**, connect it to the project, then **redeploy**. **Don't skip this.** Without a database, saved posts and links live in one server instance's memory, which Vercel wipes often, so pages show "not found". The editor shows an orange warning until a database is found.
+   The app recognises any of these, including with a custom prefix such as `MYDB_KV_REST_API_URL`:
+   - `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`, or `KV_REST_API_URL` + `KV_REST_API_TOKEN` (Upstash)
+   - `REDIS_URL` / `KV_URL` starting with `redis://` or `rediss://` (any Redis, e.g. Redis Cloud)
+   - `BLOB_READ_WRITE_TOKEN` (Vercel Blob, used as the database if there's no Redis)
+
+   The built-in sample pages (`/p/sample-…`, `/s/test-…`) are built from code, so they always open, even without a database. A link or post that really doesn't exist shows a proper "isn't available" page.
 4. **Redeploy**. Open your `https://<project>.vercel.app`, click **🔑 Token** and paste the token.
 
 CLI alternative: `npx vercel` then `npx vercel --prod`.

@@ -2,7 +2,7 @@ const POST_PREVIEW_FIELDS = ['siteName', 'title', 'excerpt', 'cover', 'imageStyl
 
 export default defineEventHandler(async (event) => {
   requireAdmin(event)
-  const before = await getPost(getRouterParam(event, 'slug'))
+  const before = await findPost(getRouterParam(event, 'slug'), getRequestURL(event).origin)
   if (!before) throw createError({ statusCode: 404, statusMessage: 'Post not found' })
   const fields = cleanPost((await readBody(event)) || {})
   const candidate = { ...before, ...fields }

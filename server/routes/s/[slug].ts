@@ -5,8 +5,8 @@
  *  - Add ?preview to see the crawler HTML in a browser.
  */
 export default defineEventHandler(async (event) => {
-  const link = await getLink(getRouterParam(event, 'slug'))
-  if (!link) throw createError({ statusCode: 404, statusMessage: 'Link not found' })
+  const link = await findLink(getRouterParam(event, 'slug'), getRequestURL(event).origin)
+  if (!link) return notFoundPage(event, 'link')
 
   const ua = getHeader(event, 'user-agent') || ''
   const query = getQuery(event)

@@ -11,6 +11,7 @@
       </div>
       <AdminTokenBar />
     </header>
+    <StorageBanner />
     <main class="page"><NuxtPage /></main>
   </div>
 </template>

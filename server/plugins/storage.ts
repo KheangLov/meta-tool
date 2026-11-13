@@ -1,30 +1,28 @@
 import upstashDriver from 'unstorage/drivers/upstash'
+import redisDriver from 'unstorage/drivers/redis'
+import vercelBlobDriver from 'unstorage/drivers/vercel-blob'
 import fsDriver from 'unstorage/drivers/fs'
 
 /**
- * Picks where link data is stored:
- *  - Upstash Redis (Vercel Marketplace) when its env vars are present
- *  - local ./.data folder during `nuxt dev`
- *  - in-memory otherwise (data is lost on every cold start — only for quick tests)
+ * Picks where data is stored. Without a database, Vercel keeps data only in the memory of
+ * one server instance, which is wiped on restart, so pages would show "not found".
  */
+const STORES = ['links', 'posts', 'uploads', 'sent']
+
 export default defineNitroPlugin(() => {
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN
+  const cfg = storageConfig()
   const storage = useStorage()
 
-  if (url && token) {
-    storage.mount('links', upstashDriver({ url, token, base: 'lps:links' }))
-    storage.mount('posts', upstashDriver({ url, token, base: 'lps:posts' }))
-    storage.mount('uploads', upstashDriver({ url, token, base: 'lps:uploads' }))
-    storage.mount('sent', upstashDriver({ url, token, base: 'lps:sent' }))
-    console.info('[storage] Using Upstash Redis')
-  } else if (import.meta.dev) {
-    storage.mount('links', fsDriver({ base: './.data/links' }))
-    storage.mount('posts', fsDriver({ base: './.data/posts' }))
-    storage.mount('uploads', fsDriver({ base: './.data/uploads' }))
-    storage.mount('sent', fsDriver({ base: './.data/sent' }))
-    console.info('[storage] Using local .data/links folder')
+  for (const name of STORES) {
+    if (cfg.kind === 'upstash') storage.mount(name, upstashDriver({ url: cfg.url, token: cfg.token, base: `lps:${name}` }))
+    else if (cfg.kind === 'redis') storage.mount(name, redisDriver({ url: cfg.url, base: `lps:${name}` }))
+    else if (cfg.kind === 'blob') storage.mount(name, vercelBlobDriver({ access: 'public', token: cfg.token, base: `lps-data/${name}` }))
+    else if (cfg.kind === 'local-files') storage.mount(name, fsDriver({ base: `./.data/${name}` }))
+  }
+
+  if (cfg.kind === 'memory') {
+    console.warn('[storage] No database found: data lives in memory and is lost when the server restarts. Env vars seen:', storageHints().join(', ') || 'none')
   } else {
-    console.warn('[storage] No Redis configured — using in-memory storage. Data will be lost on cold start.')
+    console.info(`[storage] Using ${cfg.kind}${cfg.envKey ? ` (${cfg.envKey})` : ''}`)
   }
 })

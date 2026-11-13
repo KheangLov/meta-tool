@@ -16,7 +16,7 @@ export function detectImageType(data: Buffer) {
 }
 
 export function blobConfigured() {
-  return !!(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID)
+  return !!(blobToken() || process.env.BLOB_STORE_ID)
 }
 
 interface StoredUpload { type: string; data: string; createdAt: string }
@@ -40,6 +40,7 @@ export async function saveUpload(data: Buffer, origin: string) {
       const blob = await Promise.race([
         put(`previews/${name}`, data, {
           access: 'public', contentType: kind.type, addRandomSuffix: false, abortSignal: ctrl.signal,
+          token: blobToken() || undefined,
         }),
         new Promise<never>((_, rej) => setTimeout(() => { ctrl.abort(); rej(new Error('Vercel Blob timed out')) }, 20_000)),
       ])

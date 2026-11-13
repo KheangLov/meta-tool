@@ -142,10 +142,10 @@ export async function expectedPreviewFor(url: string, origin: string, platform?:
   const m = /^\/(s|p)\/([^/]+)\/?$/.exec(u.pathname)
   if (!m) return null
   if (m[1] === 's') {
-    const l = await getLink(m[2])
+    const l = await findLink(m[2], origin)
     return l ? applyOverride({ siteName: l.siteName, title: l.title, description: l.description, image: l.image }, platform && l.platforms?.[platform]) : null
   }
-  const p = await getPost(m[2])
+  const p = await findPost(m[2], origin)
   return p ? applyOverride({ siteName: p.siteName, title: p.title, description: p.excerpt, image: p.cover }, platform && p.platforms?.[platform]) : null
 }
 
