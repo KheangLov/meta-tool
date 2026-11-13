@@ -25,6 +25,21 @@ function randomSlug(len = 7) {
 }
 export const SLUG_RE = /^[a-zA-Z0-9_-]{3,64}$/
 
+/** "Rainy Season Sale!" → "rainy-season-sale" (non-Latin text like Khmer gives "", so a random name is used) */
+export function slugify(s: string) {
+  return s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48).replace(/-+$/, '')
+}
+
+/** Last part of a URL's path ("…/p/sample-large?v=2" → "sample-large"), or its domain */
+function slugFromUrl(u: string) {
+  try {
+    const url = new URL(u)
+    const last = url.pathname.split('/').filter(Boolean).pop() || ''
+    return slugify(last.replace(/\.[a-z0-9]+$/i, '')) || slugify(url.hostname.replace(/^www\./, '').split('.')[0] || '')
+  } catch { return '' }
+}
+
 export function useStudio() {
   const api = useApi()
 
@@ -44,11 +59,19 @@ export function useStudio() {
     }
   }
 
-  async function uniqueSlug(table: 'links' | 'posts', wanted?: string) {
+  async function uniqueSlug(table: 'links' | 'posts', wanted?: string, suggestion?: string) {
     if (wanted) {
       if (!SLUG_RE.test(wanted)) throw new Error('Slug: 3–64 characters, letters, numbers, - or _')
       if (await db()[table].get(wanted)) throw new Error('That slug is already used')
       return wanted
+    }
+    // Readable name from the post or page (e.g. "sample-large", "sample-large-2") before falling back to random
+    const base = slugify(suggestion || '')
+    if (base.length >= 3) {
+      for (let i = 1; i < 50; i++) {
+        const s = i === 1 ? base : `${base}-${i}`
+        if (!(await db()[table].get(s))) return s
+      }
     }
     let s = randomSlug()
     while (await db()[table].get(s)) s = randomSlug()
@@ -59,10 +82,10 @@ export function useStudio() {
 
   async function createLink(o: { targetUrl: string; slug?: string; importMeta?: boolean; postSlug?: string }) {
     if (!/^https?:\/\//.test(o.targetUrl)) throw new Error('Target URL must start with http:// or https://')
-    const slug = await uniqueSlug('links', o.slug)
+    const post = o.postSlug ? await db().posts.get(o.postSlug) : null
+    const slug = await uniqueSlug('links', o.slug, post?.slug || slugFromUrl(o.targetUrl))
     const now = new Date().toISOString()
     let meta = { siteName: '', title: '', description: '', image: '' }
-    const post = o.postSlug ? await db().posts.get(o.postSlug) : null
     if (o.importMeta !== false && !post) {
       try {
         const r = await api<any>('/api/inspect', { query: { url: o.targetUrl } })
@@ -104,7 +127,7 @@ export function useStudio() {
   // ---------- posts ----------
 
   async function createPost(o: { title: string; slug?: string }) {
-    const slug = await uniqueSlug('posts', o.slug)
+    const slug = await uniqueSlug('posts', o.slug, o.title)
     const now = new Date().toISOString()
     const post: LocalPost = {
       slug, siteName: 'Test Blog', title: o.title || 'Untitled post', excerpt: '', body: '', cover: '', imageStyle: 'large',

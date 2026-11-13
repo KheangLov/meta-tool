@@ -241,6 +241,15 @@ const imageWarning = computed(() => {
         </div>
       </label>
 
+      <p class="whatis small">
+        <b>{{ baseShare.replace(/^https?:\/\//, '') }}</b> is your <b>share link</b>. Apps show the preview below,
+        and people who tap it are taken to <span class="target">{{ draft.targetUrl.replace(/^https?:\/\//, '') }}</span>.
+      </p>
+      <div v-if="link.publishError" class="puberr small">
+        <b>Not published:</b> {{ link.publishError }}
+        <button class="btn sm" @click="retryPublish">Retry</button>
+      </div>
+
       <div v-if="link.postSlug" class="syncbox">
         <label class="check"><input v-model="syncDraft" type="checkbox" /> Keep in sync with post <NuxtLink :to="`/posts/${link.postSlug}`"><code>/p/{{ link.postSlug }}</code></NuxtLink></label>
         <p v-if="syncDraft" class="muted small">This link copies the post's title, summary and image. Edit the post, and this link updates automatically. Untick to give the link its own preview.</p>

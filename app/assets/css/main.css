@@ -120,3 +120,11 @@ fieldset.plain:disabled .input, fieldset.plain:disabled .seg { opacity: .6; }
 .pub-ok { color: var(--ok); }
 .pub-warn { color: var(--warn); }
 .pub-error { color: var(--danger); }
+.whatis { background: #f1f5fb; border-radius: 8px; padding: 8px 10px; margin: 0 0 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.whatis .target { color: var(--muted); }
+.puberr { background: #fdecec; color: #8a1f1f; border-radius: 8px; padding: 8px 10px; margin: 0 0 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; word-break: break-word; }
+@media (max-width: 860px) {
+  .field > .row { flex-wrap: wrap; }
+  .field > .row > .input.grow { flex-basis: 100%; }
+  .picker { max-width: none; width: 100%; }
+}

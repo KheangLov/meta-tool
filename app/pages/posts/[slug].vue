@@ -177,6 +177,14 @@ async function remove() {
         <a class="btn sm ghost" :href="url" target="_blank">Open ↗</a>
       </div>
 
+      <p class="whatis small">
+        <b>{{ url.replace(/^https?:\/\//, '') }}</b> is this post's own page. Share it as it is, or make a short share link for it on the right.
+      </p>
+      <div v-if="post.publishError" class="puberr small">
+        <b>Not published:</b> {{ post.publishError }}
+        <button class="btn sm" @click="retryPublish">Retry</button>
+      </div>
+
       <label class="field">
         <span>Site name</span>
         <input v-model="draft.siteName" class="input" />

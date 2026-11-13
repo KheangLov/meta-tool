@@ -113,6 +113,13 @@ export async function listDir(path: string): Promise<string[]> {
 
 // ---------- writing ----------
 
+let branchReady: Promise<void> | null = null
+/** Makes sure the data branch exists (checked once per server instance) */
+function ensureBranchOnce() {
+  branchReady ??= ensureBranch().catch((e) => { branchReady = null; throw e })
+  return branchReady
+}
+
 async function ensureBranch() {
   const g = githubConfig()
   const ref = await gh('GET', `/repos/${g.repo}/git/ref/heads/${encodeURIComponent(g.branch)}`)
@@ -146,11 +153,10 @@ export async function writeFile(path: string, data: Buffer | string, message: st
   }
   if (!githubConfigured()) notConfigured()
   const g = githubConfig()
+  // Create the data branch first: GitHub rejects writes to a branch that doesn't exist (404 or 422)
+  await ensureBranchOnce()
   for (let attempt = 0; attempt < 3; attempt++) {
-    const sha = await currentSha(path).catch(async (e) => {
-      if (e?.statusCode === 502 && attempt === 0) { await ensureBranch(); return '' }
-      throw e
-    })
+    const sha = await currentSha(path)
     const res = await gh('PUT', contentsPath(path), {
       body: { message, content: buf.toString('base64'), branch: g.branch, ...(sha ? { sha } : {}) },
     })
@@ -159,7 +165,7 @@ export async function writeFile(path: string, data: Buffer | string, message: st
       return
     }
     // 404 = branch missing; 409/422 = someone else changed the file meanwhile → retry with the new sha
-    if (res.status === 404 && attempt === 0) { await ensureBranch(); continue }
+    if (res.status === 404 && attempt === 0) { branchReady = null; await ensureBranchOnce(); continue }
     if ((res.status === 409 || res.status === 422) && attempt < 2) continue
     await ghError(res, 'write')
   }
