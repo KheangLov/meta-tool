@@ -59,6 +59,15 @@ A bot can't post to Saved Messages, and it can only message a person who has sta
 - **Phones and tablets:** a compact floating, frosted tab bar at the bottom (the active pill springs to the tab you tap, and you can drag it along the bar, iOS-style) switches between Links, Posts, Test kit and Settings. In an editor, the **Edit / Preview / Share** switch shows one part at a time, and the **Publish** bar appears as soon as you change something.
 - **Settings** holds the admin token, the list of connections, and the GitHub connection check. The header badge shows the publishing state (*Publishing on*, *N unpublished*, *Not publishing*) and opens Settings.
 
+## Testing previews in every app
+
+- **Test in the real apps** (in each editor, and on the Test kit page): one-tap buttons put the newest link into Telegram, Facebook, Messenger, WhatsApp, X and LinkedIn. On a phone, **Share…** opens the system share sheet for any other app.
+- **What each app allows** (Test kit, and per app on the *Update apps* tab): what you can set, the limits, how to update an old preview and how to test, for Telegram, Facebook, Messenger, Instagram DMs & Threads, WhatsApp, X, LinkedIn, Discord, Slack and iMessage.
+- **Check all apps** fetches the link as each of those apps' crawlers and lists what's wrong.
+- **Did the app reach your link?** (Check tab) lists real crawler visits the server saw, so you can tell whether Facebook, WhatsApp and the rest got through. It is kept in memory and resets when the server restarts.
+- **Preview not showing on Facebook or Messenger?** (Update apps → Facebook) maps each Sharing Debugger result to its cause and fix.
+- **Accent colour** (Advanced) sets `theme-color`, the colour bar on Discord's card.
+
 ## Look and dark mode
 
 The UI is built with [squirkle-ui](https://github.com/KheangLov/squirkle-ui) (`@squirkle-ui/nuxt` + `@squirkle-ui/ui`): buttons, fields, switches, tabs, alerts and the bottom navigation are Squirkle components with squircle corners. The light and dark palettes live in `nuxt.config.ts` under `squirkle.theme.themes`; `app/assets/css/main.css` maps the app's own tokens onto the `--sq-*` variables, so both modes stay in sync.

@@ -24,6 +24,8 @@ export interface PreviewExtra {
   audioType?: string
   /** telegram:channel, e.g. @mychannel: links the page to your channel (used by Instant View) */
   tgChannel?: string
+  /** <meta name="theme-color">: the colour bar on Discord's card */
+  themeColor?: string
 }
 
 export const OG_TYPES = ['website', 'article', 'video.other', 'video.movie', 'music.song', 'profile', 'book']
@@ -54,6 +56,8 @@ export function cleanExtra(v: any): PreviewExtra {
     audioType: str(v.audioType, 60),
     tgChannel: str(v.tgChannel, 80).replace(/^(https?:\/\/)?(www\.)?(t|telegram)\.me\//i, '@').replace(/[^@A-Za-z0-9_]/g, ''),
   }
+  const colour = str(v.themeColor, 9)
+  if (/^#[0-9a-fA-F]{3,8}$/.test(colour)) out.themeColor = colour
   if (out.tgChannel && !out.tgChannel.startsWith('@')) out.tgChannel = '@' + out.tgChannel
   // Drop empty values so comparisons and storage stay tidy
   for (const k of Object.keys(out) as (keyof PreviewExtra)[]) if (out[k] === '' || out[k] === undefined) delete out[k]
@@ -117,6 +121,7 @@ export function renderMetaTags(p: {
     x.author && /^https?:\/\//.test(x.author) ? tag('article:author', x.author) : '',
     tag('article:published_time', x.publishedTime && !Number.isNaN(Date.parse(x.publishedTime)) ? new Date(x.publishedTime).toISOString() : ''),
     tag('telegram:channel', x.tgChannel),
+    tag('theme-color', x.themeColor, 'name'),
     tag('twitter:card', card, 'name'),
     tag('twitter:title', p.title, 'name'),
     tag('twitter:description', p.description, 'name'),

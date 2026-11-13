@@ -340,6 +340,9 @@ const imageWarning = computed(() => {
       </div>
 
       <div class="panels">
+        <div class="panel-body sharebox">
+          <ShareToApps :url="currentShare" :title="draft.title" :fb-app-id="fbAppId" :dirty="dirty" />
+        </div>
         <div class="panel-tabs" role="tablist">
           <button :class="{ on: panel === 'send' }" @click="panel = 'send'">Message</button>
           <button :class="{ on: panel === 'update' }" @click="panel = 'update'">Update apps</button>
@@ -358,6 +361,7 @@ const imageWarning = computed(() => {
           <div class="seg sm" style="margin-bottom:12px">
             <button v-for="a in PREVIEW_APPS" :key="a.id" :class="{ on: app === a.id }" @click="app = a.id">{{ a.label }}</button>
           </div>
+          <AppGuide :only="app" class="mb" />
 
           <div v-show="app === 'facebook' || app === 'messenger'">
             <FacebookPanel
@@ -418,6 +422,7 @@ const imageWarning = computed(() => {
 
         <div v-show="panel === 'check'" class="panel-body">
           <AppsCheck :url="currentShare" />
+          <AppVisits :slug="link.slug" kind="link" />
           <div class="step">
             <div class="row between">
               <h3>What Telegram's crawler reads</h3>

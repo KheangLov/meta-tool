@@ -43,7 +43,7 @@ onMounted(() => { sampleUrl.value = `${location.origin}/s/test-large` })
   <div class="page-head">
     <div>
       <h1>Test kit</h1>
-      <p>Sample posts, share links, images and checks for trying previews in Telegram, Facebook, Messenger and WhatsApp.</p>
+      <p>Sample posts, share links, images and checks for trying previews in Telegram, Facebook, Messenger, WhatsApp and other apps.</p>
     </div>
   </div>
 
@@ -86,6 +86,16 @@ onMounted(() => { sampleUrl.value = `${location.origin}/s/test-large` })
     <AppsCheck :url="sampleUrl" editable />
   </section>
   </div>
+
+  <section class="card" style="margin-top:16px">
+    <h2>What each app allows</h2>
+    <p class="muted small">What you can set in each app's preview, its limits, and how to update and test it.</p>
+    <AppGuide />
+  </section>
+
+  <section class="card" style="margin-top:16px">
+    <ShareToApps :url="sampleUrl" title="Sample link" />
+  </section>
 
   <section class="card" style="margin-top:16px">
     <h2>Things to try</h2>

@@ -96,6 +96,14 @@ const count = computed(() => Object.values(model.value || {}).filter((v) => v !=
         <input class="input" :value="model.tgChannel || ''" placeholder="@mychannel" @input="set('tgChannel', ($event.target as HTMLInputElement).value)" />
       </label>
 
+      <label class="field">
+        <span>Accent colour <em>(theme-color: the colour bar on Discord's card)</em></span>
+        <div class="row">
+          <input type="color" :value="model.themeColor || '#0e6b55'" aria-label="Pick a colour" @input="set('themeColor', ($event.target as HTMLInputElement).value)" />
+          <input class="input grow" :value="model.themeColor || ''" placeholder="#0e6b55" @input="set('themeColor', ($event.target as HTMLInputElement).value)" />
+        </div>
+      </label>
+
       <p class="muted small">
         Telegram stores these with the preview. How each app shows them varies (e.g. a video badge, an author line), so use
         "Show Telegram's saved preview" to see what Telegram kept. Video playback inside the preview is most reliable for small direct .mp4 files.

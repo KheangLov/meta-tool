@@ -9,7 +9,7 @@ const target = ref(props.url || '')
 watch(() => props.url, (u) => { if (u) target.value = u })
 const busy = ref(false)
 const error = ref('')
-const res = ref<{ results: Result[]; tools: { facebook: string } } | null>(null)
+const res = ref<{ results: Result[]; tools: { facebook: string; linkedin: string } } | null>(null)
 
 async function run() {
   busy.value = true
@@ -27,7 +27,7 @@ const icon = { ok: '✅', warn: '⚠️', error: '❌' }
       <b>Check all apps</b>
       <SqBtn color="primary" variant="flat" size="small" :disabled="busy || !target" @click="run">{{ busy ? 'Checking…' : 'Check all apps' }}</SqBtn>
     </div>
-    <p class="muted small">Fetches the link exactly like Telegram, Facebook/Messenger and WhatsApp do, then checks each app's rules.</p>
+    <p class="muted small">Fetches the link the way Telegram, Facebook, Messenger, WhatsApp, X, LinkedIn, Discord, Slack and iMessage do, then checks each app's rules.</p>
     <input v-if="editable" v-model="target" class="input" type="url" placeholder="https://…/s/your-link" />
     <p v-if="error" class="error small">{{ error }}</p>
     <div v-for="r in res?.results || []" :key="r.id" class="app" :class="r.level">
@@ -46,7 +46,7 @@ const icon = { ok: '✅', warn: '⚠️', error: '❌' }
       </ul>
     </div>
     <p v-if="res" class="small">
-      Facebook's own check: <a :href="res.tools.facebook" target="_blank">Sharing Debugger ↗</a>.
+      The apps' own checkers: <a :href="res.tools.facebook" target="_blank" rel="noopener">Facebook Sharing Debugger</a>, <a :href="res.tools.linkedin" target="_blank" rel="noopener">LinkedIn Post Inspector</a>.
       If it says the link "goes against our Community Standards", Facebook is blocking the domain itself, not your tags. Free shared domains like <code>*.vercel.app</code> can get flagged; a custom domain (Vercel → Domains) avoids that.
     </p>
   </div>

@@ -7,9 +7,13 @@
  */
 export default defineEventHandler(async (event) => {
   const link = await findLink(getRouterParam(event, 'slug'), getRequestURL(event).origin)
+  const ua = getHeader(event, 'user-agent') || ''
+  // Remember real crawler visits (not the tool's own checks) for "Did the app reach your link?"
+  if (BOT_RE.test(ua) && !getHeader(event, 'x-lps-check')) {
+    recordVisit({ path: getRequestURL(event).pathname + getRequestURL(event).search, slug: String(getRouterParam(event, 'slug') || ''), kind: 'link', status: link ? 200 : 404, ua })
+  }
   if (!link) return notFoundPage(event, 'link', getRouterParam(event, 'slug'))
 
-  const ua = getHeader(event, 'user-agent') || ''
   const query = getQuery(event)
   const isCrawler = BOT_RE.test(ua)
   // ?preview / ?as=… show the crawler page in a browser without forwarding

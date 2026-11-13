@@ -79,6 +79,7 @@ export interface PreviewExtra {
   audioUrl?: string
   audioType?: string
   tgChannel?: string
+  themeColor?: string
 }
 
 export function postUrl(slug: string, version?: number) {

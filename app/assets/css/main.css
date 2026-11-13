@@ -363,3 +363,5 @@ fieldset.plain:disabled .input, fieldset.plain:disabled .seg, fieldset.plain:dis
 /* Segmented tabs that fill their row */
 .sq-tabs--segmented.sq-tabs--grow .sq-tabs__bar { display: flex; width: 100%; }
 .ed-switch .sq-tabs { width: 100%; }
+
+.sharebox { border-bottom: 1px solid var(--rule); }

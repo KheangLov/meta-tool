@@ -276,6 +276,9 @@ async function remove() {
       </div>
 
       <div class="panels">
+        <div class="panel-body sharebox">
+          <ShareToApps :url="latestUrl" :title="draft.title" :fb-app-id="fbAppId" :dirty="dirty" />
+        </div>
         <div class="panel-tabs" role="tablist">
           <button :class="{ on: panel === 'send' }" @click="panel = 'send'">Message</button>
           <button :class="{ on: panel === 'update' }" @click="panel = 'update'">Update apps</button>
@@ -310,6 +313,7 @@ async function remove() {
           <div class="seg sm" style="margin-bottom:12px">
             <button v-for="a in PREVIEW_APPS" :key="a.id" :class="{ on: app === a.id }" @click="app = a.id">{{ a.label }}</button>
           </div>
+          <AppGuide :only="app" class="mb" />
           <div v-show="app === 'telegram'">
             <h2>Update in Telegram</h2>
             <template v-if="tgReady">
@@ -335,6 +339,7 @@ async function remove() {
 
         <div v-show="panel === 'check'" class="panel-body">
           <AppsCheck :url="latestUrl" />
+          <AppVisits :slug="slug" kind="post" />
         </div>
       </div>
     </aside>

@@ -4,6 +4,10 @@
  */
 export default defineEventHandler(async (event) => {
   const post = await findPost(getRouterParam(event, 'slug'), getRequestURL(event).origin)
+  const visitUa = getHeader(event, 'user-agent') || ''
+  if (BOT_RE.test(visitUa) && !getHeader(event, 'x-lps-check')) {
+    recordVisit({ path: getRequestURL(event).pathname + getRequestURL(event).search, slug: String(getRouterParam(event, 'slug') || ''), kind: 'post', status: post ? 200 : 404, ua: visitUa })
+  }
   if (!post) return notFoundPage(event, 'post', getRouterParam(event, 'slug'))
 
   const e = escapeHtml

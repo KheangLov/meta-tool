@@ -51,7 +51,7 @@ export async function scrapeAs(url: string, userAgent: string): Promise<ScrapeRe
   const empty = { siteName: '', title: '', description: '', image: '' }
   try {
     const res = await fetch(url, {
-      headers: { 'user-agent': userAgent, accept: 'text/html,*/*;q=0.8' },
+      headers: { 'user-agent': userAgent, accept: 'text/html,*/*;q=0.8', 'x-lps-check': '1' },
       redirect: 'follow',
       signal: AbortSignal.timeout(8000),
     })
