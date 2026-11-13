@@ -5,10 +5,10 @@
   "title": "Rainy season sale: 30% off all rain jackets",
   "description": "Free delivery in Phnom Penh until 30 November. Tap to see all styles.",
   "image": "https://meta-tool-smoky.vercel.app/test/large-blue-1200x630.jpg",
-  "imageStyle": "large",
+  "imageStyle": "small",
   "extra": {},
   "platforms": {},
-  "version": 1,
+  "version": 2,
   "createdAt": "2026-11-13T10:07:22.129Z",
-  "updatedAt": "2026-11-13T10:07:23.166Z"
+  "updatedAt": "2026-11-13T12:04:07.333Z"
 }
