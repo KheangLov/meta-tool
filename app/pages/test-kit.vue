@@ -38,6 +38,10 @@ const abs = (p: string) => `${location.origin}${p}`
 </script>
 
 <template>
+  <section id="github" class="card">
+    <GitHubCheck />
+  </section>
+
   <section class="card">
     <h1>Test kit</h1>
     <p class="muted">Everything you need to try sharing in Telegram: sample posts, share links and test images, all hosted on this site.</p>

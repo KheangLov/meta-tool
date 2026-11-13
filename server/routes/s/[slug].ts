@@ -6,7 +6,7 @@
  */
 export default defineEventHandler(async (event) => {
   const link = await findLink(getRouterParam(event, 'slug'), getRequestURL(event).origin)
-  if (!link) return notFoundPage(event, 'link')
+  if (!link) return notFoundPage(event, 'link', getRouterParam(event, 'slug'))
 
   const ua = getHeader(event, 'user-agent') || ''
   const query = getQuery(event)

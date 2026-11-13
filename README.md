@@ -83,6 +83,17 @@ A bot can't post to Saved Messages, and it can only message a person who has sta
 
 The `published-data` branch is created automatically on the first publish. The repo can be private: the server reads files with the token.
 
+### Links show "not found"?
+
+That means the link was saved in your browser but never published, so the site has nothing to serve. To fix it:
+
+1. Open **Test kit → GitHub publishing → Check connection**. It tests the settings, token, repo access, write permission and data branch, then does a test write. Every failing step says exactly what to change, for example *"The token can read this repo but not write to it → Contents: Read and write"*.
+2. Fix the token or variables in Vercel and **redeploy**.
+3. Open the app. Anything that wasn't published (the header shows *N unpublished*) is published automatically, or press **Publish N pending item(s)** after the check.
+
+If you open your own unpublished link in the same browser, the not-found page says so and links straight to its editor.
+`NUXT_GITHUB_REPO` can be `owner/name` or a pasted GitHub URL; both work.
+
 ## Facebook, Messenger and WhatsApp
 
 Every editor has a **Telegram / Facebook / Messenger / WhatsApp** switch above the preview. Each tab shows a mock of that app and its own update panel.

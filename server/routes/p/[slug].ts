@@ -4,7 +4,7 @@
  */
 export default defineEventHandler(async (event) => {
   const post = await findPost(getRouterParam(event, 'slug'), getRequestURL(event).origin)
-  if (!post) return notFoundPage(event, 'post')
+  if (!post) return notFoundPage(event, 'post', getRouterParam(event, 'slug'))
 
   const e = escapeHtml
   const reqUrl = getRequestURL(event)

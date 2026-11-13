@@ -206,7 +206,26 @@ export function useStudio() {
     return { added, total: r.links.length + r.posts.length }
   }
 
-  return { publish, createLink, saveLink, deleteLink, createPost, savePost, deletePost, loadSamples, restoreFromPublished }
+  /** Items saved in this browser that aren't live yet (failed or never published) */
+  async function pendingItems() {
+    const isPending = (i: LocalLink | LocalPost) => !i.builtIn && (!!i.publishError || (i.publishedVersion || 0) < (i.version || 1))
+    return {
+      posts: (await db().posts.toArray()).filter(isPending),
+      links: (await db().links.toArray()).filter(isPending),
+    }
+  }
+
+  /** Publishes everything pending (posts first, so links that follow them are consistent) */
+  async function publishPending() {
+    const { posts, links } = await pendingItems()
+    let ok = 0
+    const errors: string[] = []
+    for (const p of posts) { const r = await publish('post', p); r.ok ? ok++ : errors.push(r.error) }
+    for (const l of links) { const r = await publish('link', l); r.ok ? ok++ : errors.push(r.error) }
+    return { ok, failed: errors.length, error: errors[0] || '' }
+  }
+
+  return { pendingItems, publishPending, publish, createLink, saveLink, deleteLink, createPost, savePost, deletePost, loadSamples, restoreFromPublished }
 }
 
 /** "Published v3" / "Not published" label for a local item */

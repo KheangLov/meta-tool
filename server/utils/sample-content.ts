@@ -67,7 +67,7 @@ export async function findLink(slug: string | undefined, origin: string) {
 }
 
 /** A real, styled page for links/posts that don't exist (still HTTP 404, so crawlers don't index it) */
-export function notFoundPage(event: H3Event, what: 'post' | 'link') {
+export function notFoundPage(event: H3Event, what: 'post' | 'link', slug = '') {
   setResponseStatus(event, 404)
   setHeader(event, 'content-type', 'text/html; charset=utf-8')
   setHeader(event, 'cache-control', 'no-store, max-age=0')
@@ -78,5 +78,26 @@ export function notFoundPage(event: H3Event, what: 'post' | 'link') {
 main{max-width:460px;padding:32px;background:#fff;border:1px solid #e4e6eb;border-radius:16px;text-align:center}
 h1{font-size:22px;margin:8px 0}p{color:#6b7280;line-height:1.6}a{display:inline-block;margin-top:8px;background:#2481cc;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:600}</style></head>
 <body><main><div style="font-size:40px">🔍</div><h1>This ${what} isn't available</h1>
-<p>It may have been deleted, or the address is mistyped.</p><a href="/">Go to the home page</a></main></body></html>`
+<p id="why">It may have been deleted, or the address is mistyped.</p><a id="go" href="/">Go to the home page</a></main>
+<script>
+// If this browser made the ${what} but it was never published, say so (and link to the editor)
+(function () {
+  var slug = ${JSON.stringify(slug)}, store = ${JSON.stringify(what === 'link' ? 'links' : 'posts')}
+  if (!slug || !window.indexedDB) return
+  var req = indexedDB.open('link-preview-studio')
+  req.onupgradeneeded = function () { req.transaction.abort() } // no local data: don't create a database
+  req.onsuccess = function () {
+    var db = req.result
+    if (!db.objectStoreNames.contains(store)) return
+    var get = db.transaction(store).objectStore(store).get(slug)
+    get.onsuccess = function () {
+      if (!get.result) return
+      document.getElementById('why').textContent = 'This ${what} is saved in this browser but has not been published yet, so apps and other people cannot see it.' + (get.result.publishError ? ' Last error: ' + get.result.publishError : '')
+      var a = document.getElementById('go')
+      a.textContent = 'Open it and publish'
+      a.href = '/${what === 'link' ? 'links' : 'posts'}/' + encodeURIComponent(slug)
+    }
+  }
+})()
+</script></body></html>`
 }

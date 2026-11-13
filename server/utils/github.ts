@@ -17,9 +17,10 @@ import { dirname, join } from 'node:path'
 export function githubConfig() {
   const c = useRuntimeConfig()
   return {
-    token: String(c.githubToken || ''),
-    repo: String(c.githubRepo || ''),
-    branch: String(c.githubBranch || 'published-data'),
+    token: String(c.githubToken || '').trim(),
+    // Accept "owner/name", "https://github.com/owner/name", "github.com/owner/name.git", …
+    repo: String(c.githubRepo || '').trim().replace(/^(https?:\/\/)?(www\.)?github\.com\//i, '').replace(/\.git$/i, '').replace(/\/+$/, ''),
+    branch: String(c.githubBranch || 'published-data').trim(),
     /** Override for GitHub Enterprise (or tests) */
     api: String(c.githubApi || 'https://api.github.com').replace(/\/$/, ''),
   }
@@ -180,4 +181,52 @@ export async function deleteFile(path: string, message: string) {
   const res = await gh('DELETE', contentsPath(path), { body: { message, sha, branch: g.branch } })
   if (!res.ok && res.status !== 404) await ghError(res, 'delete')
   cache.delete(`${g.repo}@${g.branch}:${path}`)
+}
+
+/** Checks token, repo access, write permission and branch, without writing anything */
+export async function githubDiagnose() {
+  const g = githubConfig()
+  const steps: { name: string; ok: boolean; detail: string; fix?: string }[] = []
+
+  const user = await gh('GET', '/user')
+  if (user.status === 401) {
+    steps.push({ name: 'Token', ok: false, detail: 'GitHub says the token is invalid or expired.', fix: 'Create a new token (Settings → Developer settings → Fine-grained tokens) and replace NUXT_GITHUB_TOKEN in Vercel, then redeploy.' })
+    return steps
+  }
+  const login = user.ok ? (await user.json()).login : ''
+  steps.push({ name: 'Token', ok: true, detail: login ? `Valid (account ${login})` : 'Valid' })
+
+  const repo = await gh('GET', `/repos/${g.repo}`)
+  if (!repo.ok) {
+    steps.push({
+      name: 'Repo access', ok: false, detail: `GitHub answered ${repo.status} for ${g.repo}.`,
+      fix: repo.status === 404
+        ? 'The token can\'t see this repo. When creating a fine-grained token, choose "Only select repositories" and pick this repo (or check the spelling of NUXT_GITHUB_REPO).'
+        : 'Check the token and the repo name.',
+    })
+    return steps
+  }
+  const info = await repo.json()
+  const push = info.permissions?.push
+  steps.push({ name: 'Repo access', ok: true, detail: `${info.full_name} (${info.private ? 'private' : 'public'})` })
+  if (push === false) {
+    steps.push({
+      name: 'Write permission', ok: false, detail: 'The token can read this repo but not write to it.',
+      fix: 'Edit the token: Repository permissions → Contents → "Read and write". (Classic tokens need the "repo" scope.) Then redeploy, or create a new token and update NUXT_GITHUB_TOKEN.',
+    })
+    return steps
+  }
+  steps.push({ name: 'Write permission', ok: true, detail: push ? 'Yes' : 'Not reported by GitHub (checked by the test write below)' })
+
+  const ref = await gh('GET', `/repos/${g.repo}/git/ref/heads/${encodeURIComponent(g.branch)}`)
+  if (ref.ok) steps.push({ name: 'Data branch', ok: true, detail: `${g.branch} exists` })
+  else {
+    try {
+      await ensureBranchOnce()
+      steps.push({ name: 'Data branch', ok: true, detail: `${g.branch} created` })
+    } catch (e: any) {
+      steps.push({ name: 'Data branch', ok: false, detail: e?.statusMessage || String(e), fix: 'The token needs "Contents: Read and write" to create the branch.' })
+    }
+  }
+  return steps
 }
