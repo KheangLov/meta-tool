@@ -76,6 +76,8 @@ function guessVideoType(u: string) {
 export function renderMetaTags(p: {
   url: string; siteName: string; title: string; description: string; image: string
   imageStyle: 'large' | 'small'; extra?: PreviewExtra; defaultType?: string; fbAppId?: string
+  /** Real image size/type, detected from the file (used when not set by hand) */
+  imageInfo?: { width: number; height: number; type: string } | null
 }) {
   const e = escapeHtml
   const x = p.extra || {}
@@ -100,8 +102,9 @@ export function renderMetaTags(p: {
     tag('og:locale', x.locale),
     tag('og:image', p.image),
     p.image && p.image.startsWith('https:') ? tag('og:image:secure_url', p.image) : '',
-    p.image ? tag('og:image:width', x.imageWidth) : '',
-    p.image ? tag('og:image:height', x.imageHeight) : '',
+    p.image ? tag('og:image:type', p.imageInfo?.type) : '',
+    p.image ? tag('og:image:width', x.imageWidth || p.imageInfo?.width) : '',
+    p.image ? tag('og:image:height', x.imageHeight || p.imageInfo?.height) : '',
     p.image ? tag('og:image:alt', x.imageAlt) : '',
     tag('og:video', x.videoUrl),
     x.videoUrl?.startsWith('https:') ? tag('og:video:secure_url', x.videoUrl) : '',
@@ -111,8 +114,8 @@ export function renderMetaTags(p: {
     x.videoUrl ? tag('video:duration', x.videoDuration) : '',
     tag('og:audio', x.audioUrl),
     x.audioUrl ? tag('og:audio:type', x.audioType || 'audio/mpeg') : '',
-    tag('article:author', x.author),
-    tag('article:published_time', x.publishedTime),
+    x.author && /^https?:\/\//.test(x.author) ? tag('article:author', x.author) : '',
+    tag('article:published_time', x.publishedTime && !Number.isNaN(Date.parse(x.publishedTime)) ? new Date(x.publishedTime).toISOString() : ''),
     tag('telegram:channel', x.tgChannel),
     tag('twitter:card', card, 'name'),
     tag('twitter:title', p.title, 'name'),

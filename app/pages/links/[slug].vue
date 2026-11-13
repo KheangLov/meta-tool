@@ -429,6 +429,9 @@ const imageWarning = computed(() => {
           </template>
         </div>
       </div>
+      <div class="card">
+        <AppsCheck :url="currentShare" />
+      </div>
     </section>
   </div>
 </template>

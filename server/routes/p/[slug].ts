@@ -26,7 +26,10 @@ export default defineEventHandler(async (event) => {
   const view = applyOverride({ siteName: post.siteName, title: post.title, description: post.excerpt, image: post.cover }, platform ? post.platforms?.[platform] : undefined)
   const baseExtra = { author: post.author || undefined, ...post.extra }
   setHeader(event, 'vary', 'User-Agent')
+  const imgExtra: PreviewExtra = view.imageOverridden ? {} : baseExtra
+  const imageInfo = view.image && !(imgExtra.imageWidth && imgExtra.imageHeight) ? await imageDims(view.image, getRequestURL(event).origin) : null
   const meta = renderMetaTags({
+    imageInfo,
     url, ...view, imageStyle: post.imageStyle, defaultType: 'article',
     extra: view.imageOverridden ? { ...baseExtra, imageWidth: undefined, imageHeight: undefined, imageAlt: undefined } : baseExtra,
     fbAppId: String(useRuntimeConfig(event).facebookAppId || '') || undefined,

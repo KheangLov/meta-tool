@@ -83,6 +83,20 @@ A bot can't post to Saved Messages, and it can only message a person who has sta
 
 The `published-data` branch is created automatically on the first publish. The repo can be private: the server reads files with the token.
 
+### Previews wrong in Facebook, Messenger or WhatsApp?
+
+Use **Check all apps** (in the Test kit and at the bottom of each editor). It fetches the link exactly as Telegram, Facebook/Messenger and WhatsApp do, plus a generic in-app fetcher, then lists problems with fixes. Typical findings:
+- **403**: Vercel's firewall or Bot Protection blocked Meta's crawler. Allow it in Vercel → Firewall.
+- **404**: the link isn't published (see below).
+- **Image** too big for WhatsApp, or too small for Facebook.
+
+Then open Facebook's **Sharing Debugger** (linked from the check). If it says the link "goes against our Community Standards", Facebook is blocking the domain itself, not your tags. Free shared domains like `*.vercel.app` can get flagged, and a custom domain (Vercel → Domains) avoids that.
+
+How the site serves links, for reference:
+- Every page includes `og:image:width/height/type`, detected automatically from the image, so Facebook and Messenger show the image on the very first share.
+- `article:author` is only output when it's a profile URL, because Facebook rejects plain names there. Names go in `<meta name="author">`.
+- Nobody gets a blind 302 redirect any more. Crawlers get the preview page; people (and any fetcher we don't recognise) get the same page with a script that forwards them instantly, so link fetchers inside apps read your tags, not the target's. Add `?go` for a plain redirect.
+
 ### Links show "not found"?
 
 That means the link was saved in your browser but never published, so the site has nothing to serve. To fix it:

@@ -3,6 +3,10 @@ export const TELEGRAM_UA = 'TelegramBot (like TwitterBot)'
 export interface ScrapeResult {
   ok: boolean
   status: number
+  /** size of the HTML in bytes */
+  bytes?: number
+  /** the URL changed while fetching (redirect) */
+  redirected?: boolean
   finalUrl: string
   ms: number
   htmlTitle: string
@@ -61,6 +65,8 @@ export async function scrapeAs(url: string, userAgent: string): Promise<ScrapeRe
     return {
       ok: res.ok,
       status: res.status,
+      bytes: Buffer.byteLength(html),
+      redirected: res.redirected,
       finalUrl: res.url || url,
       ms: Date.now() - started,
       htmlTitle,

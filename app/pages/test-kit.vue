@@ -35,11 +35,17 @@ async function copy(text: string) {
   try { await navigator.clipboard.writeText(text); copied.value = text; setTimeout(() => (copied.value = ''), 1500) } catch {}
 }
 const abs = (p: string) => `${location.origin}${p}`
+const sampleUrl = ref('')
+onMounted(() => { sampleUrl.value = `${location.origin}/s/test-large` })
 </script>
 
 <template>
   <section id="github" class="card">
     <GitHubCheck />
+  </section>
+
+  <section class="card">
+    <AppsCheck :url="sampleUrl" editable />
   </section>
 
   <section class="card">

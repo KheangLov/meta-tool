@@ -29,7 +29,7 @@ export const SLUG_RE = /^[a-zA-Z0-9_-]{3,64}$/
 
 /** Link-preview crawlers that should receive the meta-tag HTML instead of a redirect */
 export const BOT_RE =
-  /TelegramBot|facebookexternalhit|Facebot|meta-externalagent|Twitterbot|WhatsApp|Slackbot|Discordbot|LinkedInBot|SkypeUriPreview|vkShare|Viber|Line\/|redditbot|Pinterest|Embedly|Iframely|Googlebot|bingbot/i
+  /TelegramBot|facebookexternalhit|facebookcatalog|Facebot|meta-externalagent|meta-externalfetcher|Twitterbot|WhatsApp|Slackbot|Discordbot|LinkedInBot|SkypeUriPreview|Teams|vkShare|Viber|Line\/|Zalo|KakaoTalk|Snapchat|redditbot|Pinterest|Embedly|Iframely|Googlebot|Google-InspectionTool|bingbot|Applebot|Bytespider|Mastodon|Bluesky|preview|unfurl|crawler|spider|bot\b/i
 
 /** A published link (from GitHub), or null */
 export async function getLink(slug: string | undefined) {

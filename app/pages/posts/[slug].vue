@@ -312,6 +312,9 @@ async function remove() {
 
         <TelegramSync ref="sync" :theme="theme" />
       </div>
+      <div class="card">
+        <AppsCheck :url="latestUrl" />
+      </div>
     </section>
   </div>
 </template>
