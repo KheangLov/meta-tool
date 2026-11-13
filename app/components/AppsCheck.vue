@@ -25,7 +25,7 @@ const icon = { ok: '✅', warn: '⚠️', error: '❌' }
   <div class="apps">
     <div class="row between wrap">
       <b>Check all apps</b>
-      <button class="btn sm primary" :disabled="busy || !target" @click="run">{{ busy ? 'Checking…' : 'Check all apps' }}</button>
+      <SqBtn color="primary" variant="flat" size="small" :disabled="busy || !target" @click="run">{{ busy ? 'Checking…' : 'Check all apps' }}</SqBtn>
     </div>
     <p class="muted small">Fetches the link exactly like Telegram, Facebook/Messenger and WhatsApp do, then checks each app's rules.</p>
     <input v-if="editable" v-model="target" class="input" type="url" placeholder="https://…/s/your-link" />
@@ -56,13 +56,13 @@ const icon = { ok: '✅', warn: '⚠️', error: '❌' }
 .apps { display: grid; gap: 8px; }
 .wrap { flex-wrap: wrap; gap: 8px; }
 .app { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: grid; gap: 6px; }
-.app.ok { border-color: #bfe3cc; }
-.app.warn { border-color: #f5c98b; }
-.app.error { border-color: #f1b0b0; background: #fff7f7; }
+.app.ok { border-color: color-mix(in srgb, var(--live) 40%, var(--rule)); }
+.app.warn { border-color: color-mix(in srgb, var(--amber) 45%, var(--rule)); }
+.app.error { border-color: color-mix(in srgb, var(--red) 45%, var(--rule)); background: var(--red-soft); }
 .seen { display: flex; gap: 8px; align-items: center; color: var(--muted); }
 .seen img { width: 64px; height: 34px; object-fit: cover; border-radius: 4px; }
 ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
-li.error { color: #8a1f1f; }
+li.error { color: var(--red-ink); }
 li.warn { color: var(--warn); }
-.fix { margin-top: 3px; background: #fff4e5; color: #7a4b00; padding: 4px 8px; border-radius: 6px; }
+.fix { margin-top: 3px; background: var(--amber-soft); color: var(--amber-ink); padding: 4px 8px; border-radius: 6px; }
 </style>

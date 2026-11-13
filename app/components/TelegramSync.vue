@@ -93,11 +93,11 @@ defineExpose({ run, running })
 <style scoped>
 .tgsync { margin-top: 10px; display: grid; gap: 6px; }
 .tgsum { margin: 0 0 4px; padding: 8px 10px; border-radius: 8px; font-size: 14px; }
-.tgsum.ok { background: #e9f7ef; color: var(--ok); }
-.tgsum.warn { background: #fdf3e1; color: var(--warn); }
-.tgsum.info { background: #eef4fb; color: var(--primary); }
+.tgsum.ok { background: var(--signal-soft); color: var(--ok); }
+.tgsum.warn { background: var(--amber-soft); color: var(--warn); }
+.tgsum.info { background: var(--signal-soft); color: var(--primary); }
 .tgrow { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.tgrow-head { display: flex; gap: 8px; align-items: center; width: 100%; padding: 7px 10px; background: #fafbfc; border: 0; cursor: pointer; font: inherit; text-align: left; }
+.tgrow-head { display: flex; gap: 8px; align-items: center; width: 100%; padding: 7px 10px; background: var(--raised); color: var(--ink); border: 0; cursor: pointer; font: inherit; text-align: left; }
 .tgrow-head code { font-size: 12px; word-break: break-all; }
 .tgrow-body { padding: 8px 10px 10px; }
 .diffs { margin: 0 0 6px; padding-left: 18px; color: var(--warn); }

@@ -60,7 +60,7 @@ const count = computed(() => Object.values(model.value || {}).filter((v) => v !=
         </label>
         <div class="field">
           <span>&nbsp;</span>
-          <button type="button" class="btn sm ghost" :disabled="!imageSize?.width" @click="model = { ...model, imageWidth: imageSize!.width, imageHeight: imageSize!.height }">Use real size</button>
+          <SqBtn variant="text" size="small" :disabled="!imageSize?.width" @click="model = { ...model, imageWidth: imageSize!.width, imageHeight: imageSize!.height }">Use real size</SqBtn>
         </div>
       </div>
       <label class="field">

@@ -39,7 +39,7 @@ async function publishAll() {
   <div class="ghc">
     <div class="row between wrap">
       <b>GitHub publishing</b>
-      <button class="btn sm primary" :disabled="busy" @click="run">{{ busy ? 'Checking…' : 'Check connection' }}</button>
+      <SqBtn color="primary" variant="flat" size="small" :disabled="busy" @click="run">{{ busy ? 'Checking…' : 'Check connection' }}</SqBtn>
     </div>
     <p v-if="pending && !result" class="small warn-text">{{ pending }} item(s) in this browser aren't published yet, so they show "not found". Check the connection to publish them.</p>
     <p v-if="error" class="error small">{{ error }}</p>
@@ -51,7 +51,7 @@ async function publishAll() {
     </ol>
     <p v-if="result?.ok" class="ok small">Everything works. Publishing is ready.</p>
     <p v-if="pubMsg" class="small">{{ pubMsg }}</p>
-    <button v-if="result?.ok && pending" class="btn sm" @click="publishAll">Publish {{ pending }} pending item(s)</button>
+    <SqBtn variant="tonal" size="small" v-if="result?.ok && pending"  @click="publishAll">Publish {{ pending }} pending item(s)</SqBtn>
   </div>
 </template>
 
@@ -59,7 +59,7 @@ async function publishAll() {
 .ghc { display: grid; gap: 8px; }
 .wrap { flex-wrap: wrap; gap: 8px; }
 .steps { margin: 0; padding-left: 4px; list-style: none; display: grid; gap: 6px; }
-.steps .bad { color: #8a1f1f; }
-.fix { margin: 4px 0 0 22px; background: #fff4e5; color: #7a4b00; padding: 6px 8px; border-radius: 6px; }
+.steps .bad { color: var(--red-ink); }
+.fix { margin: 4px 0 0 22px; background: var(--amber-soft); color: var(--amber-ink); padding: 6px 8px; border-radius: 6px; }
 .warn-text { color: var(--warn); }
 </style>

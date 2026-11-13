@@ -20,7 +20,7 @@ const shareUrl = computed(() => `https://wa.me/?text=${encodeURIComponent(props.
       <b>A. Share the newest link</b>
       <div class="copyrow">
         <code>{{ primaryUrl }}</code>
-        <a class="btn sm" :href="shareUrl" target="_blank">Share on WhatsApp</a>
+        <SqBtn variant="tonal" size="small" :href="shareUrl" target="_blank">Share on WhatsApp</SqBtn>
       </div>
     </div>
 

@@ -56,7 +56,7 @@ const total = computed(() => tabs.reduce((n, t) => n + count(t.id), 0))
           v-if="tab === 'whatsapp' && (cur.image || props.base.image)" :url="cur.image || props.base.image" preset="whatsapp"
           label="⚡ Make a WhatsApp-safe copy (≤ 300 KB)" @done="set('image', $event)"
         />
-        <button v-if="cur.image" type="button" class="btn sm ghost" @click="set('image', '')">Use main image</button>
+        <SqBtn variant="text" size="small" v-if="cur.image" @click="set('image', '')">Use main image</SqBtn>
       </div>
       <ImageCheck v-if="cur.image" :url="cur.image" :only="tab === 'facebook' ? ['facebook'] : tab === 'whatsapp' ? ['whatsapp'] : ['telegram']" />
     </div>

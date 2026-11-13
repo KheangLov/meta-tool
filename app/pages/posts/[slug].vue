@@ -10,7 +10,8 @@ const post = ref<LocalPost | null>(null)
 const restoring = ref(false)
 const draft = reactive({ siteName: '', title: '', excerpt: '', body: '', cover: '', imageStyle: 'large' as 'large' | 'small', author: '', extra: {} as PreviewExtra, platforms: {} as PlatformOverrides })
 const FIELDS = ['siteName', 'title', 'excerpt', 'body', 'cover', 'imageStyle', 'author'] as const
-const theme = ref<'light' | 'dark'>('light')
+// Mock previews start in the same light/dark as the tool
+const theme = ref<'light' | 'dark'>(useColorMode().isDark.value ? 'dark' : 'light')
 const error = ref('')
 const notice = ref('')
 const saving = ref(false)
@@ -169,7 +170,7 @@ async function remove() {
   <div v-else-if="!post" class="card">
     <h1>Post not on this device</h1>
     <p class="muted">{{ error }} Posts are kept in the browser you made them in. If you published it from another device, restore it from GitHub.</p>
-    <div class="row wrap"><button class="btn primary" :disabled="restoring" @click="restore">{{ restoring ? 'Restoring…' : 'Restore from GitHub' }}</button><NuxtLink class="btn ghost" to="/posts">Back to posts</NuxtLink></div>
+    <div class="row wrap"><SqBtn color="primary" variant="flat" :disabled="restoring" @click="restore">{{ restoring ? 'Restoring…' : 'Restore from GitHub' }}</SqBtn><SqBtn variant="text" to="/posts">Back to posts</SqBtn></div>
   </div>
 
   <div v-else class="editor" :class="`show-${mview}`">
@@ -179,51 +180,43 @@ async function remove() {
         <h1>{{ draft.title || post.slug }}</h1>
         <div class="ed-share">
           <code>{{ url.replace(/^https?:\/\//, '') }}</code>
-          <button class="btn sm ghost" @click="copyUrl">{{ copied ? 'Copied' : 'Copy link' }}</button>
-          <a class="btn sm ghost" :href="url" target="_blank" rel="noopener">Open page</a>
+          <SqBtn variant="text" size="small" @click="copyUrl">{{ copied ? 'Copied' : 'Copy link' }}</SqBtn>
+          <SqBtn variant="text" size="small" :href="url" target="_blank" rel="noopener">Open page</SqBtn>
           <span :class="`pub pub-${pub.kind}`" :title="post.publishError">{{ pub.text }}</span>
         </div>
       </div>
-      <button class="btn sm ghost danger" @click="remove">Delete</button>
+      <SqBtn color="error" variant="text" size="small" @click="remove">Delete</SqBtn>
     </header>
 
     <div class="ed-switch">
-      <div class="seg" role="tablist">
-        <button :class="{ on: mview === 'edit' }" @click="mview = 'edit'">Edit</button>
-        <button :class="{ on: mview === 'preview' }" @click="mview = 'preview'">Preview<span v-if="dirty"> •</span></button>
-        <button :class="{ on: mview === 'share' }" @click="mview = 'share'">Share</button>
-      </div>
+      <SqTabs
+        :model-value="mview" variant="segmented" grow
+        :items="[{ title: 'Edit', value: 'edit', icon: 'edit' }, { title: dirty ? 'Preview •' : 'Preview', value: 'preview', icon: 'eye' }, { title: 'Share', value: 'share', icon: 'lps:send' }]"
+        @update:model-value="(v: string | number) => (mview = v as typeof mview)"
+      />
     </div>
 
     <section class="ed-form">
       <div v-if="post.publishError" class="group">
-        <div class="puberr small" style="margin:0">
-          <span class="grow"><b>Not published.</b> {{ post.publishError }}</span>
-          <button class="btn sm" @click="retryPublish">Retry</button>
-        </div>
+        <SqAlert type="error" variant="tonal" title="Not published" :text="post.publishError">
+          <template #append><SqBtn variant="text" color="error" size="small" @click="retryPublish">Retry</SqBtn></template>
+        </SqAlert>
       </div>
 
       <div class="group">
         <h3>What apps show</h3>
-        <label class="field">
-          <span>Site name</span>
-          <input v-model="draft.siteName" class="input" />
-        </label>
-        <label class="field">
-          <span>Title <em class="count">{{ draft.title.length }}</em></span>
-          <input v-model="draft.title" class="input" />
-        </label>
-        <label class="field">
-          <span>Summary <em class="count">{{ draft.excerpt.length }}</em></span>
-          <textarea v-model="draft.excerpt" class="input" rows="3" placeholder="One or two sentences shown under the title" />
-        </label>
+        <div class="fields">
+          <AppField v-model="draft.siteName" label="Site name" :counter="true" />
+          <AppField v-model="draft.title" label="Title" :counter="90" />
+          <AppField v-model="draft.excerpt" multiline label="Summary" placeholder="One or two sentences shown under the title" :rows="3" :counter="300" />
+        </div>
       </div>
 
       <div class="group">
         <h3>Cover image</h3>
         <div class="field">
           <div class="row">
-            <input v-model="draft.cover" class="input grow" type="url" inputmode="url" placeholder="https://…/cover-1200x630.jpg" aria-label="Cover image URL" />
+            <AppField v-model="draft.cover" class="grow" label="Cover image URL" input-type="url" inputmode="url" placeholder="Paste an image link, 1200 × 630 works best" hide-details />
             <TestImagePicker @pick="draft.cover = $event" />
           </div>
           <ImageUpload @uploaded="draft.cover = $event" />
@@ -240,14 +233,10 @@ async function remove() {
 
       <div class="group">
         <h3>The page</h3>
-        <label class="field">
-          <span>Author</span>
-          <input v-model="draft.author" class="input" />
-        </label>
-        <label class="field">
-          <span>Body <em>(leave a blank line between paragraphs)</em></span>
-          <textarea v-model="draft.body" class="input" rows="8" />
-        </label>
+        <div class="fields">
+          <AppField v-model="draft.author" label="Author" />
+          <AppField v-model="draft.body" multiline label="Body" hint="Leave a blank line between paragraphs" :rows="8" />
+        </div>
       </div>
 
       <div class="group">
@@ -297,8 +286,8 @@ async function remove() {
           <div class="step" style="padding-top:0">
             <h3>Short links for this post</h3>
             <div class="copyrow">
-              <button class="btn sm" :disabled="making" @click="makeShareLink">{{ making ? 'Creating…' : 'Make a short link' }}</button>
-              <a class="btn sm ghost" :href="`https://t.me/share/url?url=${encodeURIComponent(latestUrl)}`" target="_blank" rel="noopener">Open Telegram</a>
+              <SqBtn variant="tonal" size="small" :disabled="making" @click="makeShareLink">{{ making ? 'Creating…' : 'Make a short link' }}</SqBtn>
+              <SqBtn variant="text" size="small" :href="`https://t.me/share/url?url=${encodeURIComponent(latestUrl)}`" target="_blank" rel="noopener">Open Telegram</SqBtn>
             </div>
             <div v-if="links.length" class="linked">
               <div v-for="l in links" :key="l.slug" class="linkedrow small">
@@ -317,7 +306,7 @@ async function remove() {
         </div>
 
         <div v-show="panel === 'update'" class="panel-body">
-          <label v-if="tgReady || tgBot || fbReady" class="check" style="margin:0 0 12px"><input v-model="autoRefresh" type="checkbox" /> <span>Update apps automatically each time I publish</span></label>
+          <SqSwitch v-if="tgReady || tgBot || fbReady" v-model="autoRefresh" inset class="mb" label="Update apps automatically each time I publish" />
           <div class="seg sm" style="margin-bottom:12px">
             <button v-for="a in PREVIEW_APPS" :key="a.id" :class="{ on: app === a.id }" @click="app = a.id">{{ a.label }}</button>
           </div>
@@ -325,7 +314,7 @@ async function remove() {
             <h2>Update in Telegram</h2>
             <template v-if="tgReady">
               <p class="muted small">Refreshes this post and its short links through @WebpageBot, then checks what Telegram shows.</p>
-              <button class="btn sm primary" :disabled="!!sync?.running || dirty" @click="refreshTelegram">{{ sync?.running ? 'Updating…' : 'Refresh in Telegram' }}</button>
+              <SqBtn color="primary" variant="flat" size="small" :disabled="!!sync?.running || dirty" @click="refreshTelegram">{{ sync?.running ? 'Updating…' : 'Refresh in Telegram' }}</SqBtn>
             </template>
             <p v-else class="muted small">Share the newest link (each publish makes one), or send the link to <a href="https://t.me/WebpageBot" target="_blank" rel="noopener">@WebpageBot</a>. Connect a Telegram account (see the README) to refresh from here.</p>
             <TelegramSync ref="sync" :theme="theme" />
@@ -358,8 +347,8 @@ async function remove() {
         <span v-else-if="dirty" class="quiet">Unpublished changes</span>
         <span v-else class="quiet">Everything is published.</span>
       </div>
-      <button class="btn ghost" :disabled="!dirty || saving" @click="fill(post)">Discard</button>
-      <button class="btn primary" :disabled="!dirty || saving" @click="save">{{ saving ? 'Publishing…' : 'Publish' }}</button>
+      <SqBtn variant="text" :disabled="!dirty || saving" @click="fill(post)">Discard</SqBtn>
+      <SqBtn color="primary" variant="flat" :disabled="!dirty || saving" @click="save">{{ saving ? 'Publishing…' : 'Publish' }}</SqBtn>
     </div>
   </div>
 </template>

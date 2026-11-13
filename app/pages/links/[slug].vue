@@ -16,7 +16,8 @@ const panel = ref<'send' | 'update' | 'check'>('send')
 const link = ref<LocalLink | null>(null)
 const restoring = ref(false)
 const draft = reactive({ targetUrl: '', siteName: '', title: '', description: '', image: '', imageStyle: 'large' as 'large' | 'small', extra: {} as PreviewExtra, platforms: {} as PlatformOverrides })
-const theme = ref<'light' | 'dark'>('light')
+// Mock previews start in the same light/dark as the tool
+const theme = ref<'light' | 'dark'>(useColorMode().isDark.value ? 'dark' : 'light')
 const error = ref('')
 const notice = ref('')
 const saving = ref(false)
@@ -225,7 +226,7 @@ const imageWarning = computed(() => {
   <div v-else-if="!link" class="card">
     <h1>Link not on this device</h1>
     <p class="muted">{{ error }} Links are kept in the browser you made them in. If you published it from another device, restore it from GitHub.</p>
-    <div class="row wrap"><button class="btn primary" :disabled="restoring" @click="restore">{{ restoring ? 'Restoring…' : 'Restore from GitHub' }}</button><NuxtLink class="btn ghost" to="/">Back to links</NuxtLink></div>
+    <div class="row wrap"><SqBtn color="primary" variant="flat" :disabled="restoring" @click="restore">{{ restoring ? 'Restoring…' : 'Restore from GitHub' }}</SqBtn><SqBtn variant="text" to="/">Back to links</SqBtn></div>
   </div>
 
   <div v-else class="editor" :class="`show-${mview}`">
@@ -235,38 +236,36 @@ const imageWarning = computed(() => {
         <h1>{{ draft.title || link.slug }}</h1>
         <div class="ed-share">
           <code>{{ baseShare.replace(/^https?:\/\//, '') }}</code>
-          <button class="btn sm ghost" @click="copy(currentShare, 'v')">{{ copied === 'v' ? 'Copied' : 'Copy link' }}</button>
+          <SqBtn variant="text" size="small" @click="copy(currentShare, 'v')">{{ copied === 'v' ? 'Copied' : 'Copy link' }}</SqBtn>
           <span :class="`pub pub-${pub.kind}`" :title="link.publishError">{{ pub.text }}</span>
         </div>
       </div>
-      <button class="btn sm ghost danger" @click="remove">Delete</button>
+      <SqBtn color="error" variant="text" size="small" @click="remove">Delete</SqBtn>
     </header>
 
     <div class="ed-switch">
-      <div class="seg" role="tablist">
-        <button :class="{ on: mview === 'edit' }" @click="mview = 'edit'">Edit</button>
-        <button :class="{ on: mview === 'preview' }" @click="mview = 'preview'">Preview<span v-if="dirty"> •</span></button>
-        <button :class="{ on: mview === 'share' }" @click="mview = 'share'">Share</button>
-      </div>
+      <SqTabs
+        :model-value="mview" variant="segmented" grow
+        :items="[{ title: 'Edit', value: 'edit', icon: 'edit' }, { title: dirty ? 'Preview •' : 'Preview', value: 'preview', icon: 'eye' }, { title: 'Share', value: 'share', icon: 'lps:send' }]"
+        @update:model-value="(v: string | number) => (mview = v as typeof mview)"
+      />
     </div>
 
     <!-- FORM -->
     <section class="ed-form">
       <div class="group">
         <h3>Where it goes</h3>
-        <label class="field">
-          <span>Page people land on</span>
+        <div class="field">
           <div class="row">
-            <input v-model="draft.targetUrl" class="input grow" type="url" inputmode="url" />
-            <button class="btn ghost" :disabled="importing || syncDraft" title="Copy title, description and image from that page" @click="importFromTarget">{{ importing ? 'Importing…' : 'Import' }}</button>
+            <AppField v-model="draft.targetUrl" class="grow" label="Page people land on" input-type="url" inputmode="url" hide-details />
+            <SqBtn variant="text" :disabled="importing || syncDraft" title="Copy title, description and image from that page" @click="importFromTarget">{{ importing ? 'Importing…' : 'Import' }}</SqBtn>
           </div>
-        </label>
-        <div v-if="link.publishError" class="puberr small">
-          <span class="grow"><b>Not published.</b> {{ link.publishError }}</span>
-          <button class="btn sm" @click="retryPublish">Retry</button>
         </div>
+        <SqAlert v-if="link.publishError" type="error" variant="tonal" title="Not published" :text="link.publishError">
+          <template #append><SqBtn variant="text" color="error" size="small" @click="retryPublish">Retry</SqBtn></template>
+        </SqAlert>
         <div v-if="link.postSlug" class="syncbox">
-          <label class="check"><input v-model="syncDraft" type="checkbox" /> <span>Use the preview of post <NuxtLink :to="`/posts/${link.postSlug}`">{{ link.postSlug }}</NuxtLink></span></label>
+          <div class="row between"><span>Use the preview of post <NuxtLink :to="`/posts/${link.postSlug}`">{{ link.postSlug }}</NuxtLink></span><SqSwitch v-model="syncDraft" inset aria-label="Use the post's preview" /></div>
           <p v-if="syncDraft" class="muted small">Edit the post to change this link's preview. Untick to give the link its own.</p>
         </div>
       </div>
@@ -274,25 +273,18 @@ const imageWarning = computed(() => {
       <fieldset class="plain" :disabled="syncDraft">
         <div class="group">
           <h3>What apps show</h3>
-          <label class="field">
-            <span>Site name <em class="count">{{ draft.siteName.length }}</em></span>
-            <input v-model="draft.siteName" class="input" placeholder="My Shop" />
-          </label>
-          <label class="field">
-            <span>Title <em class="count" :class="{ over: draft.title.length > 90 }">{{ draft.title.length }}</em></span>
-            <input v-model="draft.title" class="input" placeholder="Headline shown in bold" />
-          </label>
-          <label class="field">
-            <span>Description <em class="count" :class="{ over: draft.description.length > 300 }">{{ draft.description.length }}</em></span>
-            <textarea v-model="draft.description" class="input" rows="3" placeholder="A sentence or two" />
-          </label>
+          <div class="fields">
+            <AppField v-model="draft.siteName" label="Site name" placeholder="My Shop" counter :disabled="syncDraft" />
+            <AppField v-model="draft.title" label="Title" placeholder="Headline shown in bold" :counter="90" :disabled="syncDraft" />
+            <AppField v-model="draft.description" multiline label="Description" placeholder="A sentence or two" :rows="3" :counter="300" :disabled="syncDraft" />
+          </div>
         </div>
 
         <div class="group">
           <h3>Image</h3>
           <div class="field">
             <div class="row">
-              <input v-model="draft.image" class="input grow" type="url" inputmode="url" placeholder="https://…/cover-1200x630.jpg" aria-label="Image URL" />
+              <AppField v-model="draft.image" class="grow" label="Image URL" input-type="url" inputmode="url" placeholder="Paste an image link, 1200 × 630 works best" hide-details :disabled="syncDraft" />
               <TestImagePicker @pick="draft.image = $event" />
             </div>
             <ImageUpload @uploaded="draft.image = $event" />
@@ -362,7 +354,7 @@ const imageWarning = computed(() => {
         </div>
 
         <div v-show="panel === 'update'" class="panel-body">
-          <label v-if="tgReady || tgBot || fbReady" class="check" style="margin:0 0 12px"><input v-model="autoRefresh" type="checkbox" /> <span>Update apps automatically each time I publish</span></label>
+          <SqSwitch v-if="tgReady || tgBot || fbReady" v-model="autoRefresh" inset class="mb" label="Update apps automatically each time I publish" />
           <div class="seg sm" style="margin-bottom:12px">
             <button v-for="a in PREVIEW_APPS" :key="a.id" :class="{ on: app === a.id }" @click="app = a.id">{{ a.label }}</button>
           </div>
@@ -389,8 +381,8 @@ const imageWarning = computed(() => {
               <h3>Share the newest link</h3>
               <div class="copyrow">
                 <code>{{ currentShare }}</code>
-                <button class="btn sm" @click="copy(currentShare, 'v')">{{ copied === 'v' ? 'Copied' : 'Copy' }}</button>
-                <a class="btn sm ghost" :href="tgShare" target="_blank" rel="noopener">Open Telegram</a>
+                <SqBtn variant="tonal" size="small" @click="copy(currentShare, 'v')">{{ copied === 'v' ? 'Copied' : 'Copy' }}</SqBtn>
+                <SqBtn variant="text" size="small" :href="tgShare" target="_blank" rel="noopener">Open Telegram</SqBtn>
               </div>
               <p class="muted small">Each publish adds a new <code>?v=</code> number, so Telegram treats it as a new link and reads the latest preview.</p>
             </div>
@@ -400,10 +392,10 @@ const imageWarning = computed(() => {
               <template v-if="tgReady">
                 <p class="muted small">Sends your link to Telegram's @WebpageBot, then checks that Telegram shows what you published, pressing "Update with content" if needed.</p>
                 <div class="copyrow">
-                  <button class="btn sm primary" :disabled="!!tgBusy || dirty" @click="refreshTelegram">{{ tgBusy === 'refresh' ? 'Updating…' : 'Refresh in Telegram' }}</button>
-                  <button class="btn sm ghost" :disabled="!!tgBusy" @click="loadCached">{{ tgBusy === 'cached' ? 'Loading…' : "Show Telegram's copy" }}</button>
+                  <SqBtn color="primary" variant="flat" size="small" :disabled="!!tgBusy || dirty" @click="refreshTelegram">{{ tgBusy === 'refresh' ? 'Updating…' : 'Refresh in Telegram' }}</SqBtn>
+                  <SqBtn variant="text" size="small" :disabled="!!tgBusy" @click="loadCached">{{ tgBusy === 'cached' ? 'Loading…' : "Show Telegram's copy" }}</SqBtn>
                 </div>
-                <label class="check"><input v-model="withContent" type="checkbox" /> <span>Also press "Update with content" (if the image or description stays old)</span></label>
+                <SqCheckbox v-model="withContent" label="Also press &quot;Update with content&quot; (if the image or description stays old)" />
                 <p v-if="dirty" class="muted small">Publish your changes first.</p>
                 <p v-if="tgError" class="error small">{{ tgError }}</p>
                 <TelegramSync ref="sync" :theme="theme" />
@@ -429,7 +421,7 @@ const imageWarning = computed(() => {
           <div class="step">
             <div class="row between">
               <h3>What Telegram's crawler reads</h3>
-              <button class="btn sm" :disabled="checking" @click="checkTelegram">{{ checking ? 'Checking…' : 'Check' }}</button>
+              <SqBtn variant="tonal" size="small" :disabled="checking" @click="checkTelegram">{{ checking ? 'Checking…' : 'Check' }}</SqBtn>
             </div>
             <template v-if="seen">
               <p class="small" :class="seen.ok ? 'ok' : 'error'">HTTP {{ seen.status || '—' }}, {{ seen.ms }} ms<span v-if="seen.error">: {{ seen.error }}</span></p>
@@ -458,8 +450,8 @@ const imageWarning = computed(() => {
         <span v-else-if="dirty" class="quiet">Unpublished changes</span>
         <span v-else class="quiet">Everything is published.</span>
       </div>
-      <button class="btn ghost" :disabled="!dirty || saving" @click="fill(link)">Discard</button>
-      <button class="btn primary" :disabled="!dirty || saving" @click="save">{{ saving ? 'Publishing…' : 'Publish' }}</button>
+      <SqBtn variant="text" :disabled="!dirty || saving" @click="fill(link)">Discard</SqBtn>
+      <SqBtn color="primary" variant="flat" :disabled="!dirty || saving" @click="save">{{ saving ? 'Publishing…' : 'Publish' }}</SqBtn>
     </div>
   </div>
 </template>

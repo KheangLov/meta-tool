@@ -94,8 +94,8 @@ defineExpose({ refresh })
       <b>A. Share the newest link</b>
       <div class="copyrow">
         <code>{{ primaryUrl }}</code>
-        <a class="btn sm" :href="fbShare" target="_blank">Share on Facebook</a>
-        <a class="btn sm ghost" :href="msgrShare" target="_blank">Send in Messenger</a>
+        <SqBtn variant="tonal" size="small" :href="fbShare" target="_blank">Share on Facebook</SqBtn>
+        <SqBtn variant="text" size="small" :href="msgrShare" target="_blank">Send in Messenger</SqBtn>
       </div>
       <p class="muted small">Each saved change gets a new <code>?v=</code> link. Facebook hasn't seen it yet, so it always reads the latest preview.</p>
     </div>
@@ -104,9 +104,9 @@ defineExpose({ refresh })
       <b>B. Refresh Facebook's saved copy</b>
       <template v-if="connected">
         <div class="copyrow">
-          <button class="btn sm primary" :disabled="!!busy || dirty" @click="refresh">{{ busy === 'refresh' ? 'Re-scraping…' : 'Re-scrape on Facebook' }}</button>
-          <button class="btn sm ghost" :disabled="!!busy" @click="showCached">{{ busy === 'cached' ? 'Loading…' : "Show Facebook's saved preview" }}</button>
-          <a class="btn sm ghost" :href="debugger_" target="_blank">Sharing Debugger ↗</a>
+          <SqBtn color="primary" variant="flat" size="small" :disabled="!!busy || dirty" @click="refresh">{{ busy === 'refresh' ? 'Re-scraping…' : 'Re-scrape on Facebook' }}</SqBtn>
+          <SqBtn variant="text" size="small" :disabled="!!busy" @click="showCached">{{ busy === 'cached' ? 'Loading…' : "Show Facebook's saved preview" }}</SqBtn>
+          <SqBtn variant="text" size="small" :href="debugger_" target="_blank">Sharing Debugger ↗</SqBtn>
         </div>
         <p v-if="dirty" class="muted small">Save first.</p>
         <div v-for="r in rows" :key="r.url" class="fbrow">
@@ -142,7 +142,7 @@ defineExpose({ refresh })
           <span>Post text <em>{title}, {description} work here; the link is added as a card</em></span>
           <textarea v-model="postText" class="input" rows="2" />
         </label>
-        <button class="btn sm primary" :disabled="!!busy || dirty" @click="postToPage">{{ busy === 'post' ? 'Posting…' : 'Publish on Page' }}</button>
+        <SqBtn color="primary" variant="flat" size="small" :disabled="!!busy || dirty" @click="postToPage">{{ busy === 'post' ? 'Posting…' : 'Publish on Page' }}</SqBtn>
         <div v-for="r in posts" :key="r.id" class="sentrow small">
           <span>📘</span>
           <span class="grow">{{ new Date(r.sentAt).toLocaleString() }}</span>

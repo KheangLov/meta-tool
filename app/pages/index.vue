@@ -40,17 +40,11 @@ onMounted(load)
 
   <section class="card">
     <form class="create" @submit.prevent="create">
-      <label class="field">
-        <span>Page to link to</span>
-        <input v-model="targetUrl" class="input" type="url" inputmode="url" required placeholder="https://example.com/article" />
-      </label>
-      <label class="field">
-        <span>Link name <em>(optional)</em></span>
-        <input v-model="slug" class="input" placeholder="summer-sale" pattern="[A-Za-z0-9_\-]{3,64}" autocapitalize="off" />
-      </label>
-      <button class="btn primary" :disabled="creating">{{ creating ? 'Creating…' : 'Create link' }}</button>
+      <AppField v-model="targetUrl" label="Page to link to" input-type="url" inputmode="url" required placeholder="https://example.com/article" hide-details />
+      <AppField v-model="slug" label="Link name (optional)" placeholder="summer-sale" autocapitalize="off" hide-details />
+      <SqBtn color="primary" variant="flat" type="submit" :loading="creating" :disabled="creating">{{ creating ? 'Creating…' : 'Create link' }}</SqBtn>
     </form>
-    <label class="check"><input v-model="importMeta" type="checkbox" /> Start from the page's current title, description and image</label>
+    <SqCheckbox v-model="importMeta" class="mt" label="Start from the page's current title, description and image" />
     <p v-if="error" class="error small">{{ error }}</p>
   </section>
 

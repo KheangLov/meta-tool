@@ -11,6 +11,8 @@
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
+    "@squirkle-ui/nuxt": "^0.2.0",
+    "@squirkle-ui/ui": "^0.2.0",
     "@upstash/redis": "^1.35.0",
     "@vercel/blob": "^2.9.0",
     "big-integer": "^1.6.52",

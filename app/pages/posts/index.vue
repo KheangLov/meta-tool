@@ -35,15 +35,9 @@ onMounted(load)
 
   <section class="card">
     <form class="create" @submit.prevent="create">
-      <label class="field">
-        <span>Title</span>
-        <input v-model="title" class="input" required placeholder="Rainy season sale" />
-      </label>
-      <label class="field">
-        <span>Page name <em>(optional)</em></span>
-        <input v-model="slug" class="input" placeholder="rainy-sale" pattern="[A-Za-z0-9_\-]{3,64}" autocapitalize="off" />
-      </label>
-      <button class="btn primary" :disabled="creating">{{ creating ? 'Creating…' : 'Create post' }}</button>
+      <AppField v-model="title" label="Title" required placeholder="Rainy season sale" hide-details />
+      <AppField v-model="slug" label="Page name (optional)" placeholder="rainy-sale" autocapitalize="off" hide-details />
+      <SqBtn color="primary" variant="flat" type="submit" :loading="creating" :disabled="creating">{{ creating ? 'Creating…' : 'Create post' }}</SqBtn>
     </form>
     <p v-if="error" class="error small">{{ error }}</p>
   </section>

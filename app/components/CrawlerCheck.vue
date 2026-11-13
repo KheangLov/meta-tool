@@ -19,7 +19,7 @@ async function run() {
   <div class="step">
     <div class="row between">
       <b>Check what {{ label }}'s crawler sees</b>
-      <button class="btn sm" :disabled="busy" @click="run">{{ busy ? 'Checking…' : 'Check live' }}</button>
+      <SqBtn variant="tonal" size="small" :disabled="busy" @click="run">{{ busy ? 'Checking…' : 'Check live' }}</SqBtn>
     </div>
     <p v-if="error" class="small error">{{ error }}</p>
     <template v-if="res">
@@ -39,6 +39,6 @@ async function run() {
 </template>
 
 <style scoped>
-.crawl { display: flex; gap: 10px; align-items: flex-start; background: #f7f9fb; border-radius: 8px; padding: 8px; }
+.crawl { display: flex; gap: 10px; align-items: flex-start; background: var(--raised); border-radius: 8px; padding: 8px; }
 .crawl img { width: 96px; height: 50px; object-fit: cover; border-radius: 4px; flex: none; }
 </style>

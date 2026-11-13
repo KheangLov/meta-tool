@@ -1,7 +1,6 @@
 <script setup lang="ts">
 const { token, save } = useAdminToken()
 const draft = ref(token.value)
-const shown = ref(false)
 const saved = ref(false)
 const health = ref<any>(null)
 onMounted(async () => { try { health.value = await $fetch('/api/health') } catch {} })
@@ -10,6 +9,12 @@ function apply() {
   saved.value = true
   setTimeout(() => location.reload(), 400)
 }
+const { mode } = useColorMode()
+const modes = [
+  { title: 'System', value: 'system', icon: 'lps:system' },
+  { title: 'Light', value: 'light', icon: 'sun' },
+  { title: 'Dark', value: 'dark', icon: 'moon' },
+]
 const yes = (v: boolean) => (v ? 'Connected' : 'Not connected')
 </script>
 
@@ -23,12 +28,17 @@ const yes = (v: boolean) => (v ? 'Connected' : 'Not connected')
 
   <div class="kitgrid">
     <section class="card">
+      <h2>Appearance</h2>
+      <p class="muted small">System follows your phone or computer.</p>
+      <SqTabs :model-value="mode" variant="segmented" grow :items="modes" @update:model-value="(v: string | number) => (mode = v as typeof mode)" />
+    </section>
+
+    <section class="card">
       <h2>Admin token</h2>
       <p class="muted small">The password you set as <code>NUXT_ADMIN_TOKEN</code> in Vercel. It unlocks publishing and the app tools on this device.</p>
-      <div class="row wrap">
-        <input v-model="draft" :type="shown ? 'text' : 'password'" class="input grow" placeholder="Admin token" autocomplete="current-password" @keyup.enter="apply" />
-        <button class="btn ghost" type="button" @click="shown = !shown">{{ shown ? 'Hide' : 'Show' }}</button>
-        <button class="btn primary" :disabled="!draft" @click="apply">{{ saved ? 'Saved' : 'Save token' }}</button>
+      <div class="row wrap end">
+        <AppField v-model="draft" class="grow" input-type="password" label="Admin token" autocomplete="current-password" hide-details @enter="apply" />
+        <SqBtn color="primary" variant="flat" :disabled="!draft" @click="apply">{{ saved ? 'Saved' : 'Save token' }}</SqBtn>
       </div>
     </section>
 

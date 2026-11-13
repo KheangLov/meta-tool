@@ -145,8 +145,8 @@ defineExpose({ updateAll, count: computed(() => sent.value.length) })
       </div>
     </div>
     <div class="row wrap">
-      <label class="check"><input type="checkbox" :checked="options.disablePreview" @change="options = { ...options, disablePreview: ($event.target as HTMLInputElement).checked }" /> No preview</label>
-      <label class="check"><input type="checkbox" :checked="options.silent" @change="options = { ...options, silent: ($event.target as HTMLInputElement).checked }" /> Send silently</label>
+      <SqCheckbox :model-value="options.disablePreview" label="No preview" @update:model-value="options = { ...options, disablePreview: !!$event }" />
+      <SqCheckbox :model-value="options.silent" label="Send silently" @update:model-value="options = { ...options, silent: !!$event }" />
     </div>
 
     <div class="sendbox">
@@ -161,14 +161,14 @@ defineExpose({ updateAll, count: computed(() => sent.value.length) })
             <option v-if="via === 'account'" value="me">Saved Messages</option>
             <option v-for="c in recent" :key="c" :value="c" />
           </datalist>
-          <button class="btn primary sm" :disabled="sending || !canSend || dirty" @click="send">{{ sending ? 'Sending…' : 'Send to Telegram' }}</button>
+          <SqBtn color="primary" variant="flat" size="small" :disabled="sending || !canSend || dirty" @click="send">{{ sending ? 'Sending…' : 'Send to Telegram' }}</SqBtn>
         </div>
         <p v-if="dirty" class="muted small">Save first. Messages always use the saved preview.</p>
         <p v-if="via === 'bot'" class="muted small">The bot must be an admin of the channel or group, or the person must have started the bot.</p>
       </template>
       <template v-else>
         <p class="small">
-          <a class="btn sm" :href="shareLink" target="_blank">Open in Telegram to share</a>
+          <SqBtn variant="tonal" size="small" :href="shareLink" target="_blank">Open in Telegram to share</SqBtn>
           <span class="muted"> Telegram opens with the link filled in. Connect an account or a bot (README) to send with these options and keep sent messages updated.</span>
         </p>
       </template>
@@ -179,7 +179,7 @@ defineExpose({ updateAll, count: computed(() => sent.value.length) })
     <div v-if="sent.length" class="sentlist">
       <div class="row between">
         <b class="small">Sent from this tool ({{ sent.length }})</b>
-        <button class="btn sm" :disabled="updating || dirty" @click="updateAll()">{{ updating ? 'Updating…' : 'Update all to newest preview' }}</button>
+        <SqBtn variant="tonal" size="small" :disabled="updating || dirty" @click="updateAll()">{{ updating ? 'Updating…' : 'Update all to newest preview' }}</SqBtn>
       </div>
       <div v-for="r in sent" :key="r.id" class="sentrow small">
         <span :title="r.lastError">{{ r.lastStatus === 'error' ? '❌' : r.lastStatus === 'updated' ? '✅' : r.lastStatus === 'unchanged' ? '✔️' : '📨' }}</span>
@@ -200,11 +200,11 @@ defineExpose({ updateAll, count: computed(() => sent.value.length) })
 <style scoped>
 .send { margin-top: 4px; }
 .chips { display: flex; gap: 4px; flex-wrap: wrap; }
-.chip { font: inherit; font-size: 12px; padding: 2px 8px; border: 1px solid var(--line); border-radius: 99px; background: #fff; cursor: pointer; }
+.chip { font: inherit; font-size: 12px; padding: 2px 8px; border: 1px solid var(--line); border-radius: 99px; background: var(--surface); color: var(--ink); cursor: pointer; }
 .optgrid { display: flex; gap: 14px; flex-wrap: wrap; }
 .optgrid .field { margin-bottom: 8px; }
 .wrap { flex-wrap: wrap; }
-.sendbox { background: #f7f9fb; border-radius: 8px; padding: 10px; margin-top: 10px; }
+.sendbox { background: var(--raised); border-radius: 8px; padding: 10px; margin-top: 10px; }
 .sendbox .input { min-width: 180px; }
 .sentlist { margin-top: 12px; display: grid; gap: 6px; }
 .sentrow { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; }

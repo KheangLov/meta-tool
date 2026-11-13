@@ -23,7 +23,7 @@ async function run() {
 
 <template>
   <span class="opt">
-    <button type="button" class="btn sm ghost" :disabled="busy || !url" @click="run">{{ busy ? 'Optimizing…' : label || `⚡ ${IMAGE_PRESETS[preset || 'whatsapp'].label}` }}</button>
+    <SqBtn variant="text" size="small" :disabled="busy || !url" @click="run">{{ busy ? 'Optimizing…' : label || `⚡ ${IMAGE_PRESETS[preset || 'whatsapp'].label}` }}</SqBtn>
     <span v-if="msg" class="small muted">{{ msg }}</span>
   </span>
 </template>

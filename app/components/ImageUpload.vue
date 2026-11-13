@@ -51,7 +51,7 @@ function onPaste(e: ClipboardEvent) {
     class="upload" :class="{ over, busy }" tabindex="0"
     @dragover.prevent="over = true" @dragleave="over = false" @drop.prevent="onDrop" @paste="onPaste"
   >
-    <button type="button" class="btn sm" :disabled="busy" @click="input?.click()">⬆ {{ busy ? 'Uploading…' : 'Upload image' }}</button>
+    <SqBtn variant="tonal" size="small" :disabled="busy" @click="input?.click()">⬆ {{ busy ? 'Uploading…' : 'Upload image' }}</SqBtn>
     <span class="small muted">{{ status || 'or drop / paste an image here' }}</span>
     <span v-if="error" class="small error">{{ error }}</span>
     <input ref="input" type="file" accept="image/*" hidden @change="upload(($event.target as HTMLInputElement).files?.[0])" />
@@ -61,6 +61,6 @@ function onPaste(e: ClipboardEvent) {
 <style scoped>
 .upload { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; padding: 8px 10px; border: 1.5px dashed var(--line); border-radius: 8px; font-weight: 400; outline: none; }
 .upload:focus { border-color: var(--primary); }
-.upload.over { border-color: var(--primary); background: #eef4fb; }
+.upload.over { border-color: var(--primary); background: var(--signal-soft); }
 .upload.busy { opacity: .8; }
 </style>

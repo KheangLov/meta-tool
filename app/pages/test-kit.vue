@@ -55,8 +55,8 @@ onMounted(() => { sampleUrl.value = `${location.origin}/s/test-large` })
       They're already live on the site even before you do this. Saving an edited sample publishes your version. Running this again resets them.
     </p>
     <div class="row wrap">
-      <button class="btn primary" :disabled="seeding" @click="seed">{{ seeding ? 'Loading…' : created.length ? 'Reset sample content' : 'Load sample posts & links' }}</button>
-      <button class="btn ghost" :disabled="restoring" @click="restore">{{ restoring ? 'Restoring…' : 'Restore from GitHub' }}</button>
+      <SqBtn color="primary" variant="flat" :disabled="seeding" @click="seed">{{ seeding ? 'Loading…' : created.length ? 'Reset sample content' : 'Load sample posts & links' }}</SqBtn>
+      <SqBtn variant="text" :disabled="restoring" @click="restore">{{ restoring ? 'Restoring…' : 'Restore from GitHub' }}</SqBtn>
     </div>
     <p v-if="restoreMsg" class="small">{{ restoreMsg }}</p>
     <p v-if="error" class="error">{{ error }}</p>
@@ -115,13 +115,13 @@ onMounted(() => { sampleUrl.value = `${location.origin}/s/test-large` })
       <div v-for="i in images" :key="i.file" class="imgcard">
         <img :src="i.url" alt="" />
         <div class="small"><b>{{ i.w }}×{{ i.h }}</b> · {{ i.note }}</div>
-        <button class="btn sm" @click="copy(i.url)">{{ copied === i.url ? 'Copied ✓' : 'Copy URL' }}</button>
+        <SqBtn variant="tonal" size="small" @click="copy(i.url)">{{ copied === i.url ? 'Copied ✓' : 'Copy URL' }}</SqBtn>
       </div>
     </div>
     <h2 style="margin-top:18px">Test video &amp; audio</h2>
     <div v-for="m in media" :key="m.file" class="copyrow small">
       <code>{{ m.url }}</code> <span class="muted">{{ m.note }}</span>
-      <button class="btn sm" @click="copy(m.url)">{{ copied === m.url ? 'Copied ✓' : 'Copy URL' }}</button>
+      <SqBtn variant="tonal" size="small" @click="copy(m.url)">{{ copied === m.url ? 'Copied ✓' : 'Copy URL' }}</SqBtn>
     </div>
   </section>
 </template>
