@@ -1,6 +1,6 @@
 <script setup lang="ts">
-const api = useApi()
-const links = ref<LinkMeta[]>([])
+const studio = useStudio()
+const links = ref<LocalLink[]>([])
 const loading = ref(true)
 const error = ref('')
 
@@ -12,7 +12,7 @@ const creating = ref(false)
 async function load() {
   loading.value = true
   error.value = ''
-  try { links.value = await api<LinkMeta[]>('/api/links') }
+  try { links.value = await db().links.orderBy('updatedAt').reverse().toArray() }
   catch (e) { error.value = errMsg(e) }
   finally { loading.value = false }
 }
@@ -21,10 +21,7 @@ async function create() {
   creating.value = true
   error.value = ''
   try {
-    const link = await api<LinkMeta>('/api/links', {
-      method: 'POST',
-      body: { targetUrl: targetUrl.value, slug: slug.value || undefined, importMeta: importMeta.value },
-    })
+    const link = await studio.createLink({ targetUrl: targetUrl.value, slug: slug.value || undefined, importMeta: importMeta.value })
     await navigateTo(`/links/${link.slug}`)
   } catch (e) { error.value = errMsg(e) }
   finally { creating.value = false }
@@ -57,7 +54,7 @@ onMounted(load)
   <section>
     <h2 class="section-title">Your links</h2>
     <p v-if="loading" class="muted">Loading…</p>
-    <p v-else-if="!links.length && !error" class="muted">No links yet.</p>
+    <p v-else-if="!links.length && !error" class="muted">No links on this device yet. Create one, or <NuxtLink to="/test-kit">restore what you published</NuxtLink>.</p>
     <div class="grid">
       <NuxtLink v-for="l in links" :key="l.slug" :to="`/links/${l.slug}`" class="link-card">
         <TelegramPreview
@@ -67,7 +64,7 @@ onMounted(load)
         />
         <div class="link-card-foot">
           <code>/s/{{ l.slug }}</code>
-          <span class="muted">v{{ l.version }} · {{ new Date(l.updatedAt).toLocaleString() }}</span>
+          <span :class="`pub pub-${publishLabel(l).kind}`">{{ publishLabel(l).text }}</span>
         </div>
       </NuxtLink>
     </div>

@@ -116,3 +116,7 @@ fieldset.plain:disabled .input, fieldset.plain:disabled .seg { opacity: .6; }
 .linked { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; display: grid; gap: 4px; }
 .linkedrow { display: flex; gap: 8px; align-items: center; }
 .apptabs { margin: 0 0 10px; flex-wrap: wrap; }
+.pub { font-size: 12px; font-weight: 600; }
+.pub-ok { color: var(--ok); }
+.pub-warn { color: var(--warn); }
+.pub-error { color: var(--danger); }

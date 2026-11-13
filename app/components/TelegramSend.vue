@@ -4,12 +4,8 @@
  * The options and text are v-models so the editor's Telegram mock shows exactly what will be sent.
  */
 interface SendOptions { size: 'auto' | 'large' | 'small'; position: 'below' | 'above'; disablePreview: boolean; silent: boolean; parseMode: 'plain' | 'html' }
-interface SentRecord {
-  id: string; via: 'account' | 'bot'; chat: string; chatTitle: string; messageId: number; messageLink?: string
-  url: string; sentAt: string; updatedAt?: string; lastStatus?: string; lastError?: string; options: SendOptions
-}
-
-const props = defineProps<{ owner: string; latestUrl: string; account: boolean; bot: boolean; dirty?: boolean }>()
+const props = defineProps<{ owner: string; latestUrl: string; title: string; description: string; account: boolean; bot: boolean; dirty?: boolean }>()
+const target = () => ({ url: props.latestUrl, title: props.title, description: props.description })
 const options = defineModel<SendOptions>('options', { required: true })
 const template = defineModel<string>('template', { required: true })
 
@@ -35,7 +31,10 @@ onMounted(() => {
 
 async function load() {
   if (!props.owner) return
-  try { sent.value = await api<SentRecord[]>('/api/telegram/sent', { query: { owner: props.owner } }) } catch {}
+  try {
+    sent.value = (await db().sent.where('owner').equals(props.owner).toArray())
+      .filter((r) => r.via !== 'fbpage').sort((a, b) => b.sentAt.localeCompare(a.sentAt))
+  } catch {}
 }
 
 function remember(c: string) {
@@ -49,8 +48,9 @@ async function send() {
   try {
     const rec = await api<SentRecord>('/api/telegram/send', {
       method: 'POST',
-      body: { owner: props.owner, via: via.value, chat: chat.value || (via.value === 'account' ? 'me' : ''), template: template.value, options: options.value },
+      body: { owner: props.owner, via: via.value, chat: chat.value || (via.value === 'account' ? 'me' : ''), template: template.value, options: options.value, target: target() },
     })
+    await db().sent.put(plain(rec))
     remember(chat.value || 'me')
     sent.value = [rec, ...sent.value]
     notice.value = `Sent to ${rec.chatTitle}.`
@@ -64,7 +64,9 @@ async function updateAll(ids?: string[]) {
   updating.value = true
   error.value = ''
   try {
-    const res = await api<{ results: SentRecord[] }>('/api/telegram/update-sent', { method: 'POST', body: { owner: props.owner, ids } })
+    const records = plain(sent.value.filter((r) => !ids || ids.includes(r.id)))
+    const res = await api<{ results: SentRecord[] }>('/api/telegram/update-sent', { method: 'POST', body: { records, target: target() } })
+    await db().sent.bulkPut(res.results)
     const byId = new Map(res.results.map((r) => [r.id, r]))
     sent.value = sent.value.map((r) => byId.get(r.id) || r)
     const failed = res.results.filter((r) => r.lastStatus === 'error').length
@@ -77,7 +79,8 @@ async function updateAll(ids?: string[]) {
 async function forget(r: SentRecord, deleteMessage: boolean) {
   if (deleteMessage && !confirm(`Delete this message from ${r.chatTitle} in Telegram?`)) return
   try {
-    await api('/api/telegram/sent', { method: 'DELETE', query: { owner: props.owner, id: r.id, deleteMessage: deleteMessage ? 1 : undefined } })
+    if (deleteMessage) await api('/api/telegram/delete-sent', { method: 'POST', body: { record: plain(r) } })
+    await db().sent.delete(r.id)
     sent.value = sent.value.filter((x) => x.id !== r.id)
   } catch (e) { error.value = errMsg(e) }
 }

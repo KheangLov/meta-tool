@@ -7,7 +7,7 @@ interface FbPreview { title: string; description: string; siteName: string; type
 interface Row { url: string; status: string; diffs: string[]; preview?: FbPreview; error?: string }
 
 const props = defineProps<{
-  primaryUrl: string; urls: string[]; owner: string; template: string; dirty?: boolean
+  primaryUrl: string; urls: string[]; owner: string; template: string; dirty?: boolean; title: string; description: string
   connected: boolean; pageConnected: boolean; appId?: string; theme: 'light' | 'dark'
 }>()
 const api = useApi()
@@ -20,7 +20,7 @@ const postText = ref('{title}')
 
 async function loadPosts() {
   if (!props.owner) return
-  try { posts.value = (await api<any[]>('/api/telegram/sent', { query: { owner: props.owner } })).filter((r) => r.via === 'fbpage') } catch {}
+  try { posts.value = (await db().sent.where('owner').equals(props.owner).toArray()).filter((r) => r.via === 'fbpage') } catch {}
 }
 onMounted(loadPosts)
 
@@ -55,7 +55,11 @@ async function postToPage() {
   busy.value = 'post'
   error.value = ''
   try {
-    const rec = await api<any>('/api/facebook/post', { method: 'POST', body: { owner: props.owner, template: postText.value } })
+    const rec = await api<SentRecord>('/api/facebook/post', {
+      method: 'POST',
+      body: { owner: props.owner, template: postText.value, target: { url: props.primaryUrl, title: props.title, description: props.description } },
+    })
+    await db().sent.put(plain(rec))
     posts.value = [rec, ...posts.value]
   } catch (e) { error.value = errMsg(e) }
   finally { busy.value = '' }
@@ -64,7 +68,8 @@ async function postToPage() {
 async function removePost(r: any, deleteMessage: boolean) {
   if (deleteMessage && !confirm('Delete this post from your Facebook Page?')) return
   try {
-    await api('/api/telegram/sent', { method: 'DELETE', query: { owner: props.owner, id: r.id, deleteMessage: deleteMessage ? 1 : undefined } })
+    if (deleteMessage) await api('/api/telegram/delete-sent', { method: 'POST', body: { record: plain(r) } })
+    await db().sent.delete(r.id)
     posts.value = posts.value.filter((x) => x.id !== r.id)
   } catch (e) { error.value = errMsg(e) }
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-const api = useApi()
-const posts = ref<Post[]>([])
+const studio = useStudio()
+const posts = ref<LocalPost[]>([])
 const loading = ref(true)
 const error = ref('')
 const title = ref('')
@@ -9,7 +9,7 @@ const creating = ref(false)
 
 async function load() {
   loading.value = true
-  try { posts.value = await api<Post[]>('/api/posts') }
+  try { posts.value = await db().posts.orderBy('updatedAt').reverse().toArray() }
   catch (e) { error.value = errMsg(e) }
   finally { loading.value = false }
 }
@@ -17,7 +17,7 @@ async function create() {
   creating.value = true
   error.value = ''
   try {
-    const p = await api<Post>('/api/posts', { method: 'POST', body: { title: title.value, slug: slug.value || undefined } })
+    const p = await studio.createPost({ title: title.value, slug: slug.value || undefined })
     await navigateTo(`/posts/${p.slug}`)
   } catch (e) { error.value = errMsg(e) }
   finally { creating.value = false }
@@ -49,7 +49,7 @@ onMounted(load)
       <NuxtLink to="/test-kit" class="small">Need sample posts? → Test kit</NuxtLink>
     </div>
     <p v-if="loading" class="muted">Loading…</p>
-    <p v-else-if="!posts.length && !error" class="muted">No posts yet.</p>
+    <p v-else-if="!posts.length && !error" class="muted">No posts on this device yet. Create one, or <NuxtLink to="/test-kit">load samples / restore what you published</NuxtLink>.</p>
     <div class="grid">
       <NuxtLink v-for="p in posts" :key="p.slug" :to="`/posts/${p.slug}`" class="link-card">
         <TelegramPreview
@@ -58,7 +58,7 @@ onMounted(load)
         />
         <div class="link-card-foot">
           <code>/p/{{ p.slug }}</code>
-          <span class="muted">{{ new Date(p.updatedAt).toLocaleString() }}</span>
+          <span :class="`pub pub-${publishLabel(p).kind}`">{{ publishLabel(p).text }}</span>
         </div>
       </NuxtLink>
     </div>

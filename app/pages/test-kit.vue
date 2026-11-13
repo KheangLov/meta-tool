@@ -1,5 +1,16 @@
 <script setup lang="ts">
-const api = useApi()
+const studio = useStudio()
+const restoring = ref(false)
+const restoreMsg = ref('')
+async function restore() {
+  restoring.value = true
+  restoreMsg.value = ''
+  try {
+    const r = await studio.restoreFromPublished()
+    restoreMsg.value = r.total ? `Restored ${r.added} of ${r.total} published items into this browser.` : 'Nothing is published yet.'
+  } catch (e) { restoreMsg.value = errMsg(e) }
+  finally { restoring.value = false }
+}
 const images = ref<{ file: string; url: string; w: number; h: number; note: string }[]>([])
 const media = ref<{ file: string; url: string; note: string }[]>([])
 const seeding = ref(false)
@@ -15,7 +26,7 @@ onMounted(async () => {
 async function seed() {
   seeding.value = true
   error.value = ''
-  try { created.value = (await api<{ created: typeof created.value }>('/api/test-kit/seed', { method: 'POST' })).created }
+  try { created.value = await studio.loadSamples() }
   catch (e) { error.value = errMsg(e) }
   finally { seeding.value = false }
 }
@@ -33,10 +44,14 @@ const abs = (p: string) => `${location.origin}${p}`
 
     <h2 style="margin-top:18px">1. Create sample content</h2>
     <p class="muted small">
-      Creates 8 sample posts (<code>/p/sample-…</code>) and a share link for each (<code>/s/test-…</code>), plus one link that overrides its page's preview.
-      Running it again resets them to the defaults.
+      Copies 8 sample posts (<code>/p/sample-…</code>) and their share links (<code>/s/test-…</code>) into this browser so you can edit them.
+      They're already live on the site even before you do this. Saving an edited sample publishes your version. Running this again resets them.
     </p>
-    <button class="btn primary" :disabled="seeding" @click="seed">{{ seeding ? 'Creating…' : created.length ? 'Reset sample content' : 'Create sample posts & links' }}</button>
+    <div class="row">
+    <button class="btn primary" :disabled="seeding" @click="seed">{{ seeding ? 'Loading…' : created.length ? 'Reset sample content' : 'Load sample posts & links' }}</button>
+    <button class="btn ghost" :disabled="restoring" @click="restore">{{ restoring ? 'Restoring…' : '⟳ Restore published items from GitHub' }}</button>
+    </div>
+    <p v-if="restoreMsg" class="small">{{ restoreMsg }}</p>
     <p v-if="error" class="error">{{ error }}</p>
 
     <table v-if="created.length" class="kit">

@@ -15,16 +15,18 @@ export function detectImageType(data: Buffer) {
   return null
 }
 
+export function blobToken() {
+  const k = Object.keys(process.env).find((x) => (x === 'BLOB_READ_WRITE_TOKEN' || x.endsWith('_BLOB_READ_WRITE_TOKEN')) && process.env[x])
+  return k ? process.env[k]! : ''
+}
 export function blobConfigured() {
   return !!(blobToken() || process.env.BLOB_STORE_ID)
 }
-
-interface StoredUpload { type: string; data: string; createdAt: string }
-export const uploadStore = () => useStorage<StoredUpload>('uploads')
+export const uploadTarget = () => (blobConfigured() ? 'blob' : publishTarget())
 
 /**
  * Saves an image and returns its public URL.
- * Vercel Blob (public store) when connected; otherwise the app's own storage, served from /u/<name>.
+ * Vercel Blob (public store) when connected; otherwise committed to your GitHub repo and served from /u/<name>.
  */
 export async function saveUpload(data: Buffer, origin: string) {
   const kind = detectImageType(data)
@@ -46,11 +48,11 @@ export async function saveUpload(data: Buffer, origin: string) {
       ])
       return { url: blob.url, storage: 'blob' as const, bytes: data.length, type: kind.type }
     } catch (e: any) {
-      // e.g. a private Blob store: Telegram can't read private files, so fall back to app storage
-      console.warn('[uploads] Vercel Blob upload failed, using app storage instead:', e?.message || e)
+      // e.g. a private Blob store: Telegram can't read private files, so fall back to GitHub
+      console.warn('[uploads] Vercel Blob upload failed, using GitHub instead:', e?.message || e)
     }
   }
 
-  await uploadStore().setItem(name, { type: kind.type, data: data.toString('base64'), createdAt: new Date().toISOString() })
-  return { url: `${origin}/u/${name}`, storage: 'app' as const, bytes: data.length, type: kind.type }
+  await writeFile(`published/uploads/${name}`, data, `Upload image ${name}`)
+  return { url: `${origin}/u/${name}`, storage: publishTarget(), bytes: data.length, type: kind.type }
 }

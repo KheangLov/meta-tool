@@ -19,18 +19,10 @@ export interface Post {
   updatedAt: string
 }
 
-export const postStore = () => useStorage<Post>('posts')
-
+/** A published post (from GitHub), or null */
 export async function getPost(slug: string | undefined) {
   if (!slug || !SLUG_RE.test(slug)) return null
-  return await postStore().getItem(slug)
-}
-
-export async function listPosts() {
-  const store = postStore()
-  const keys = await store.getKeys()
-  const items = await Promise.all(keys.map((k) => store.getItem(k)))
-  return items.filter((x): x is Post => !!x).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  return await readJson<Post>(`published/posts/${slug}.json`)
 }
 
 export function cleanPost(body: any) {
@@ -50,26 +42,4 @@ export function cleanPost(body: any) {
     out.cover = c
   }
   return out
-}
-
-export async function savePost(slug: string, fields: Partial<Post>, existing?: Post | null) {
-  const now = new Date().toISOString()
-  const post: Post = {
-    slug,
-    siteName: 'Test Blog',
-    title: 'Untitled post',
-    excerpt: '',
-    body: '',
-    cover: '',
-    imageStyle: 'large',
-    author: '',
-    extra: {},
-    version: 1,
-    createdAt: existing?.createdAt || now,
-    ...existing,
-    ...fields,
-    updatedAt: now,
-  }
-  await postStore().setItem(slug, post)
-  return post
 }

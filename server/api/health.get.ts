@@ -1,15 +1,15 @@
 export default defineEventHandler((event) => {
-  const cfg = storageConfig()
+  const g = githubConfig()
   return {
-    storage: cfg.kind,
-    storageEnv: cfg.envKey,
-    storageHints: cfg.kind === 'memory' ? storageHints() : [],
+    publish: publishTarget(),
+    githubRepo: g.repo,
+    githubBranch: g.branch,
     adminTokenSet: !!useRuntimeConfig(event).adminToken,
     telegram: telegramConfigured(),
     telegramBot: botConfigured(),
     facebook: facebookConfigured(),
     facebookPage: facebookPageConfigured(),
     facebookAppId: String(useRuntimeConfig(event).facebookAppId || ''),
-    uploads: blobConfigured() ? 'blob' : cfg.kind,
+    uploads: uploadTarget(),
   }
 })

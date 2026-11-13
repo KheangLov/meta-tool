@@ -1,21 +1,20 @@
 /**
- * Edits messages this tool sent so they show the newest preview.
- * Each edit points the preview at the newest ?v= URL, which Telegram hasn't cached yet,
- * so it always fetches the latest title, description and image.
- * Body: { owner, ids? }
+ * Edits messages the tool sent so they show the newest preview (points them at the newest ?v= URL,
+ * which Telegram hasn't cached yet). Body: { records: SentRecord[], target: { url, title, description } }
+ * Returns the updated records for the browser to save.
  */
 export default defineEventHandler(async (event) => {
   requireAdmin(event)
   const body = (await readBody(event)) || {}
-  const owner = String(body.owner || '')
-  const target = await latestTarget(owner, getRequestURL(event).origin)
-  const list = await listSent(owner)
-  // Facebook doesn't let apps change the link card of a published post, so only Telegram messages are edited
-  const todo = list.filter((r) => r.via !== 'fbpage' && (!body.ids || body.ids.includes(r.id)))
+  const target = cleanTarget(body.target)
+  const records: SentRecord[] = (Array.isArray(body.records) ? body.records : []).slice(0, 50)
+  // Facebook doesn't let apps change the link card of a published post
+  const todo = records.filter((r) => r && (r.via === 'account' || r.via === 'bot') && Number(r.messageId) > 0)
 
   const run = async (client?: any) => {
     for (const rec of todo) {
-      const text = renderTemplate(rec.template, target, rec.options.parseMode === 'html')
+      rec.options = cleanSendOptions(rec.options)
+      const text = renderTemplate(String(rec.template ?? '{link}'), target, rec.options.parseMode === 'html')
       try {
         rec.lastStatus = rec.via === 'bot' ? await editViaBot(rec, text, target.url) : await editViaAccount(client, rec, text, target.url)
         rec.url = target.url
@@ -27,11 +26,7 @@ export default defineEventHandler(async (event) => {
       }
     }
   }
-
-  const needsAccount = todo.some((r) => r.via === 'account')
-  if (needsAccount) await withTelegram(async (client) => { await run(client) })
+  if (todo.some((r) => r.via === 'account')) await withTelegram(async (client) => { await run(client) })
   else await run()
-
-  await saveSent(owner, list)
-  return { url: target.url, results: todo }
+  return { results: todo }
 })

@@ -9,7 +9,9 @@ const route = useRoute()
 const api = useApi()
 const slug = String(route.params.slug)
 
-const link = ref<LinkMeta | null>(null)
+const studio = useStudio()
+const link = ref<LocalLink | null>(null)
+const restoring = ref(false)
 const draft = reactive({ targetUrl: '', siteName: '', title: '', description: '', image: '', imageStyle: 'large' as 'large' | 'small', extra: {} as PreviewExtra, platforms: {} as PlatformOverrides })
 const theme = ref<'light' | 'dark'>('light')
 const error = ref('')
@@ -73,7 +75,8 @@ async function refreshTelegram() {
 watch(syncDraft, async (on) => {
   if (!on || !link.value?.postSlug || link.value.syncWithPost) return
   try {
-    const p = await api<Post>(`/api/posts/${link.value.postSlug}`)
+    const p = await db().posts.get(link.value.postSlug)
+    if (!p) throw new Error('The post this link follows isn\'t on this device. Open Test kit → Restore.')
     Object.assign(draft, { siteName: p.siteName, title: p.title, description: p.excerpt, image: p.cover, imageStyle: p.imageStyle, extra: { ...(p.extra || {}) }, platforms: JSON.parse(JSON.stringify(p.platforms || {})) })
   } catch (e) { error.value = errMsg(e) }
 })
@@ -97,10 +100,27 @@ function fill(l: LinkMeta) {
 
 async function load() {
   try {
-    link.value = await api<LinkMeta>(`/api/links/${slug}`)
-    fill(link.value)
+    const l = await db().links.get(slug)
+    if (!l) throw new Error('This link isn\'t on this device.')
+    link.value = l
+    fill(l)
   } catch (e) { error.value = errMsg(e) }
 }
+
+/** Pull published links/posts from GitHub into this browser, then try again */
+async function restore() {
+  restoring.value = true
+  try { await studio.restoreFromPublished(); error.value = ''; await load() }
+  catch (e) { error.value = errMsg(e) }
+  finally { restoring.value = false }
+}
+
+async function retryPublish() {
+  if (!link.value) return
+  const r = await studio.publish('link', link.value)
+  link.value = r.item as LocalLink
+}
+const pub = computed(() => publishLabel(link.value || undefined))
 onMounted(load)
 
 const sameJson = (a: unknown, b: unknown) => JSON.stringify(a || {}) === JSON.stringify(b || {})
@@ -130,22 +150,27 @@ async function save() {
   saving.value = true
   error.value = notice.value = ''
   try {
-    const res = await api<LinkMeta & { previewChanged: boolean }>(`/api/links/${slug}`, { method: 'PUT', body: { ...draft, syncWithPost: syncDraft.value } })
+    const out = await studio.saveLink(slug, { ...plain(draft), syncWithPost: syncDraft.value })
+    const res = out.link
     link.value = res
     fill(res)
     seen.value = null
-    notice.value = res.previewChanged
-      ? `Saved as version ${res.version}.` + (tgReady.value && autoRefresh.value ? ' Updating Telegram…' : ` New link with the latest preview: ${shareUrl(res)}`)
-      : 'Saved.'
-    if (res.previewChanged && autoRefresh.value && (tgReady.value || fbReady.value || sender.value?.count)) {
+    if (!out.published) {
+      error.value = `Saved on this device, but not published: ${out.publishError}`
+      return
+    }
+    notice.value = out.previewChanged
+      ? `Published version ${res.version}.` + (tgReady.value && autoRefresh.value ? ' Updating Telegram…' : ` New link with the latest preview: ${shareUrl(res)}`)
+      : 'Published.'
+    if (out.previewChanged && autoRefresh.value && (tgReady.value || fbReady.value || sender.value?.count)) {
       saving.value = false
       const okRefresh = tgReady.value ? await refreshTelegram() : true
       const okSent = sender.value?.count ? await sender.value.updateAll() : true
       const okFb = fbReady.value ? await fbPanel.value?.refresh() !== false : true
       const done = [tgReady.value && 'Telegram', fbReady.value && 'Facebook & Messenger'].filter(Boolean).join(' and ')
       notice.value = okRefresh && okSent && okFb
-        ? `Saved as version ${res.version}. ${done || 'Telegram'} now show${done.includes(' and ') ? '' : 's'} the latest preview${sender.value?.count ? ', and your sent messages were updated' : ''}.`
-        : `Saved as version ${res.version}. Some updates didn't finish. See the details on the right.`
+        ? `Published version ${res.version}. ${done || 'Telegram'} now show${done.includes(' and ') ? '' : 's'} the latest preview${sender.value?.count ? ', and your sent messages were updated' : ''}.`
+        : `Published version ${res.version}. Some updates didn't finish. See the details on the right.`
     }
   } catch (e) { error.value = errMsg(e) }
   finally { saving.value = false }
@@ -176,7 +201,7 @@ async function copy(text: string, what: string) {
 
 async function remove() {
   if (!confirm(`Delete /s/${slug}? The short link will stop working.`)) return
-  try { await api(`/api/links/${slug}`, { method: 'DELETE' }); await navigateTo('/') }
+  try { await studio.deleteLink(slug); await navigateTo('/') }
   catch (e) { error.value = errMsg(e) }
 }
 
@@ -194,14 +219,18 @@ const imageWarning = computed(() => {
 
 <template>
   <div v-if="!link && !error" class="muted">Loading…</div>
-  <div v-else-if="!link" class="card"><p class="error">{{ error }}</p><NuxtLink to="/">← Back</NuxtLink></div>
+  <div v-else-if="!link" class="card">
+    <p class="error">{{ error }}</p>
+    <p class="muted small">Links are kept in the browser you made them in. If you published it from another device, restore it from GitHub.</p>
+    <div class="row"><button class="btn primary" :disabled="restoring" @click="restore">{{ restoring ? 'Restoring…' : 'Restore from GitHub' }}</button><NuxtLink to="/">← Back</NuxtLink></div>
+  </div>
 
   <div v-else class="editor">
     <!-- LEFT: form -->
     <section class="card">
       <div class="row between">
         <h1>Edit <code>/s/{{ link.slug }}</code></h1>
-        <span class="pill">v{{ link.version }}</span>
+        <span :class="`pub pub-${pub.kind}`" :title="link.publishError">{{ pub.text }}<button v-if="pub.kind === 'error' || pub.kind === 'warn'" class="linkbtn small" @click="retryPublish"> · retry</button></span>
       </div>
 
       <label class="field">
@@ -260,7 +289,7 @@ const imageWarning = computed(() => {
       </fieldset>
 
       <div class="row actions">
-        <button class="btn primary" :disabled="!dirty || saving" @click="save">{{ saving ? 'Saving…' : dirty ? 'Save changes' : 'Saved' }}</button>
+        <button class="btn primary" :disabled="!dirty || saving" @click="save">{{ saving ? 'Publishing…' : dirty ? 'Save & publish' : 'Saved' }}</button>
         <button class="btn ghost" :disabled="!dirty" @click="fill(link)">Discard</button>
         <span class="grow" />
         <button class="btn danger ghost" @click="remove">Delete</button>
@@ -302,14 +331,14 @@ const imageWarning = computed(() => {
         <TelegramSend
           v-show="app === 'telegram'"
           ref="sender" v-model:options="sendOpts" v-model:template="sendTemplate"
-          :owner="`link:${link.slug}`" :latest-url="currentShare" :account="tgReady" :bot="tgBot" :dirty="dirty"
+          :owner="`link:${link.slug}`" :latest-url="currentShare" :account="tgReady" :bot="tgBot" :dirty="dirty" :title="draft.title" :description="draft.description"
         />
       </div>
 
       <div v-show="app === 'facebook' || app === 'messenger'" class="card">
         <FacebookPanel
           ref="fbPanel" :primary-url="currentShare" :urls="refreshUrls" :owner="`link:${link.slug}`" :template="sendTemplate"
-          :dirty="dirty" :connected="fbReady" :page-connected="fbPage" :app-id="fbAppId" :theme="theme"
+          :dirty="dirty" :connected="fbReady" :page-connected="fbPage" :app-id="fbAppId" :theme="theme" :title="draft.title" :description="draft.description"
         />
       </div>
 

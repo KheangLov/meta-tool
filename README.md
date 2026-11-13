@@ -6,6 +6,7 @@ Make short share links whose **Telegram preview** (site name, title, description
   - **Telegram's crawler** (and Facebook, WhatsApp and similar) gets a small HTML page with your Open Graph tags.
   - **People** who tap it are sent (302) to your target URL.
   - Add `?preview` to view the crawler HTML in a browser.
+- **No database.** Your posts, links and sent messages are kept in your browser (IndexedDB, via [Dexie](https://dexie.org)). **Save & publish** writes a small JSON file to your GitHub repo, and the site reads it whenever Telegram, Facebook or WhatsApp opens a link. See *How data is stored* below.
 - The editor shows a **live Telegram-style preview** (light and dark) as you type.
 - **Check live** fetches your link the way `TelegramBot` does and shows what it reads.
 - Every saved change adds a new `?v=` number. Post `…/s/promo?v=3` and Telegram treats it as a new link, so it shows the new preview straight away.
@@ -52,6 +53,36 @@ Telegram only applies these to a message that is actually sent, so the tool can 
 
 A bot can't post to Saved Messages, and it can only message a person who has started it. Use *My account* for those.
 
+## How data is stored (no database)
+
+| What | Where |
+|---|---|
+| Your links, posts, drafts and the list of messages the tool sent | **This browser**, in IndexedDB (Dexie). Nothing leaves the browser until you publish. |
+| What Telegram, Facebook, WhatsApp and visitors see | **Your GitHub repo**, branch `published-data`: `published/links/<slug>.json`, `published/posts/<slug>.json`, `published/uploads/…` |
+| Built-in samples (`/p/sample-…`, `/s/test-…`) | In the code. They're always live, even before anything is published. |
+
+- **Save & publish** saves to the browser first, then commits the JSON file to GitHub (one small commit per publish). The status next to the title shows *Published v3*, *Unpublished changes* or *Not published*, with a **retry** button if GitHub was unreachable.
+- The site reads published files from the GitHub API with ETags. Unchanged files get a quick "not modified" answer that doesn't count against GitHub's rate limit, and new publishes show up immediately, with no redeploy.
+- **Another browser or device?** Open **Test kit → Restore published items from GitHub** (or open a link's editor and click *Restore from GitHub*) to copy everything published into that browser.
+- Clearing your browser data removes local drafts and the sent-message list. Published items can be restored from GitHub.
+- `vercel.json` tells Vercel not to deploy the `published-data` branch, so publishing never starts a new deployment. If you change the branch name, change it there too.
+
+### Publishing to GitHub
+
+1. On GitHub: **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+   - *Repository access*: **Only select repositories** → your `meta-tool` repo
+   - *Repository permissions*: **Contents → Read and write** (nothing else needed)
+2. In Vercel → **Settings → Environment Variables**:
+   ```
+   NUXT_GITHUB_TOKEN=github_pat_…
+   NUXT_GITHUB_REPO=KheangLov/meta-tool
+   # optional, default "published-data"
+   NUXT_GITHUB_BRANCH=published-data
+   ```
+3. **Redeploy**. The header shows **GitHub ✓**. Until then it shows *Not publishing*, with an orange banner explaining the steps.
+
+The `published-data` branch is created automatically on the first publish. The repo can be private: the server reads files with the token.
+
 ## Facebook, Messenger and WhatsApp
 
 Every editor has a **Telegram / Facebook / Messenger / WhatsApp** switch above the preview. Each tab shows a mock of that app and its own update panel.
@@ -85,8 +116,8 @@ Every image field has an **Upload image** button. You can also drag a file onto 
 
 - JPEG, PNG, WebP and GIF are accepted. The server checks the real file type, not just the file name.
 - Photos larger than 2400 px or 3.8 MB are resized in the browser to a JPEG first, so they fit Vercel's 4.5 MB upload limit.
-- **Recommended:** in Vercel go to **Storage → Create → Blob**, choose **public** access, and connect it to the project. It adds `BLOB_READ_WRITE_TOKEN`. Uploads then go to Vercel Blob, which serves them from a fast public CDN URL.
-- Without Blob, or if a Blob upload fails, images are saved in the app's own storage (Upstash Redis) and served from `/u/<name>`. If neither is connected, uploads are kept in memory and disappear when the server restarts.
+- Uploads are committed to your GitHub repo (`published/uploads/` on the data branch) and served from `/u/<name>` with a one-year cache, so Vercel's CDN serves them after the first request.
+- Optional: if a **public** Vercel Blob store is connected (`BLOB_READ_WRITE_TOKEN`), uploads go there instead.
 
 ## How the tool keeps previews up to date after you save
 
@@ -101,7 +132,7 @@ Links that were already posted in chats may still show the old card until the ch
 
 ```bash
 npm install
-npm run dev            # http://localhost:3000. Data is saved in .data/ and no token is needed in dev.
+npm run dev            # http://localhost:3000. Without a GitHub token, "published" files go to .data/ and no admin token is needed in dev.
 ```
 
 Telegram can't reach `localhost`. To test real previews, deploy it (below) or use a tunnel such as `cloudflared tunnel --url http://localhost:3000`.
@@ -111,13 +142,7 @@ Telegram can't reach `localhost`. To test real previews, deploy it (below) or us
 1. Push this folder to a GitHub repo, then go to **vercel.com → Add New → Project** and import it. Vercel detects Nuxt on its own, so you don't need to change any build settings.
 2. Under **Settings → Environment Variables**, add
    `NUXT_ADMIN_TOKEN` = a long random string. This is the password for the editor.
-3. Under **Storage → Create Database → Upstash for Redis**, connect it to the project, then **redeploy**. **Don't skip this.** Without a database, saved posts and links live in one server instance's memory, which Vercel wipes often, so pages show "not found". The editor shows an orange warning until a database is found.
-   The app recognises any of these, including with a custom prefix such as `MYDB_KV_REST_API_URL`:
-   - `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`, or `KV_REST_API_URL` + `KV_REST_API_TOKEN` (Upstash)
-   - `REDIS_URL` / `KV_URL` starting with `redis://` or `rediss://` (any Redis, e.g. Redis Cloud)
-   - `BLOB_READ_WRITE_TOKEN` (Vercel Blob, used as the database if there's no Redis)
-
-   The built-in sample pages (`/p/sample-…`, `/s/test-…`) are built from code, so they always open, even without a database. A link or post that really doesn't exist shows a proper "isn't available" page.
+3. Set up **Publishing to GitHub** (next section): add `NUXT_GITHUB_TOKEN` and `NUXT_GITHUB_REPO`.
 4. **Redeploy**. Open your `https://<project>.vercel.app`, click **🔑 Token** and paste the token.
 
 CLI alternative: `npx vercel` then `npx vercel --prod`.
@@ -153,56 +178,57 @@ Notes:
 
 1. Create a link and set a title, description and a 1200×630 image (it must be a public https URL).
 2. Copy the link and paste it into Telegram (Saved Messages works well). The preview should match.
-3. Change the title and click **Save**. The version goes up.
+3. Change the title and click **Save & publish**. The version goes up.
 4. Paste the new `?v=` link and you'll see the new preview. Or send the original link to @WebpageBot, then post it again.
 
 ## API (all calls need the `x-admin-token` header)
 
+The server keeps no data of its own. These calls publish to GitHub or talk to the apps.
+
 | Method | Path | Body / query |
 |---|---|---|
-| GET | `/api/links` | – |
-| POST | `/api/links` | `{ targetUrl, slug?, importMeta?, title?, description?, image?, siteName?, imageStyle? }` |
-| GET / PUT / DELETE | `/api/links/:slug` | PUT: any editable fields |
-| GET | `/api/inspect?url=` | Fetches a URL as TelegramBot and returns the parsed meta tags |
-| GET / POST | `/api/posts` | POST: `{ title, slug?, siteName?, excerpt?, body?, cover?, imageStyle?, author? }` |
-| GET / PUT / DELETE | `/api/posts/:slug` | PUT: any post fields |
+| POST | `/api/publish` | `{ kind: 'link'\|'post', item }`: validate and write to GitHub |
+| DELETE | `/api/publish?kind=&slug=` | Unpublish (delete the file) |
+| GET | `/api/published` | Everything published, for restoring into a browser |
 | POST | `/api/uploads` | multipart form field `file` → `{ url }` |
-| POST | `/api/telegram/send` | `{ owner: 'link:<slug>'\|'post:<slug>', via: 'account'\|'bot', chat, template, options: { size, position, disablePreview, silent, parseMode } }` |
-| GET / DELETE | `/api/telegram/sent?owner=` | List / forget (`&id=…&deleteMessage=1` also deletes in Telegram) |
-| POST | `/api/telegram/update-sent` | `{ owner, ids? }`: edit sent messages to the newest preview |
-| POST | `/api/facebook/refresh` | `{ url }` or `{ urls }` (max 10): re-scrape + compare |
-| POST | `/api/facebook/preview` | `{ url }`: what Facebook has saved |
-| POST | `/api/facebook/post` | `{ owner, template }`: publish to your Page |
+| GET | `/api/inspect?url=&as=` | Fetch as `telegram`, `facebook` or `whatsapp` and return the meta tags |
 | GET | `/api/image-info?url=` | Size, dimensions and per-app checks |
-| GET | `/api/inspect?url=&as=` | Fetch as `telegram`, `facebook` or `whatsapp` |
-| POST | `/api/test-kit/seed` | Creates or resets the sample posts and links |
+| GET | `/api/test-kit/samples` | The built-in sample posts and links |
 | GET | `/api/telegram/status` | Whether Telegram is connected, and which account |
 | POST | `/api/telegram/preview` | `{ url }`: the preview Telegram has saved right now |
-| POST | `/api/telegram/refresh` | `{ url }` or `{ urls: [...] }` (max 5), `withContent?`: refresh with @WebpageBot |
+| POST | `/api/telegram/refresh` | `{ url }` or `{ urls }` (max 5), `withContent?`: refresh with @WebpageBot and check |
+| POST | `/api/telegram/send` | `{ owner, via, chat, template, options, target: { url, title, description } }` → record (kept in the browser) |
+| POST | `/api/telegram/update-sent` | `{ records, target }`: edit sent messages to the newest preview |
+| POST | `/api/telegram/delete-sent` | `{ record }`: delete a sent message or Page post |
+| POST | `/api/facebook/refresh` | `{ url }` or `{ urls }` (max 10): re-scrape and compare |
+| POST | `/api/facebook/preview` | `{ url }`: what Facebook has saved |
+| POST | `/api/facebook/post` | `{ owner, template, target }`: publish to your Page |
 
 ## Project layout
 
 ```
 app/                       Editor UI (Vue, runs in the browser)
-  components/TelegramPreview.vue   Telegram-style preview card
+  composables/useDb.ts     Browser database (Dexie / IndexedDB)
+  composables/useStudio.ts Save → publish → keep share links in sync
+  components/              Previews for each app, panels, image tools
   pages/index.vue          Create and list links
-  pages/links/[slug].vue   Editor, preview and "Update in Telegram" panel
+  pages/links/[slug].vue   Link editor
   pages/posts/…            Create and edit posts
-  pages/test-kit.vue       Sample content + test images
+  pages/test-kit.vue       Samples, restore from GitHub, test images
 server/
-  routes/s/[slug].ts       The public share link (meta HTML for bots, redirect for people)
+  routes/s/[slug].ts       The public share link (meta HTML for crawlers, redirect for people)
   routes/p/[slug].ts       Public post page
-  utils/samples.ts         Sample posts and test cases
-  api/…                    Create, read, update and delete links + inspect
-  api/telegram/…           Refresh with @WebpageBot, and read Telegram's saved preview
-  plugins/storage.ts       Chooses Upstash Redis, local files or memory
+  routes/u/[name].ts       Uploaded images (from GitHub)
+  utils/github.ts          Read/write published files in your GitHub repo
+  utils/samples.ts         Built-in sample posts and test cases
+  api/publish*.ts          Publish / unpublish / list
+  api/telegram/…           Refresh with @WebpageBot, send and edit messages
   utils/telegram.ts        Telegram user-account client (GramJS)
-  utils/                   Validation, auth, meta-tag scraper
+  utils/                   Validation, auth, meta-tag scraper, per-app rules
 scripts/telegram-login.mjs One-time Telegram login that prints the session string
 ```
 
 ## Next steps (ideas)
 
-- Upload images directly (Vercel Blob) instead of pasting a URL
-- Facebook / Messenger: preview tab + one-click re-scrape through the Graph API (`POST /?id=<url>&scrape=true`)
 - Click counts per link
+- LinkedIn and X previews

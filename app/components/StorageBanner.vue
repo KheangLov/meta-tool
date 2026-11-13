@@ -1,22 +1,21 @@
 <script setup lang="ts">
-/** Warns when the deployment has no database, which makes posts and links vanish ("not found"). */
-const health = ref<{ storage: string; storageHints: string[] } | null>(null)
+/** Explains where data lives, and warns when publishing to GitHub isn't set up. */
+const health = ref<{ publish: string; githubRepo: string; githubBranch: string } | null>(null)
 onMounted(async () => { try { health.value = await $fetch('/api/health') } catch {} })
 </script>
 
 <template>
-  <div v-if="health?.storage === 'memory'" class="sbanner">
-    <b>⚠️ No database connected.</b>
-    Posts and links you save are kept only in temporary memory. Vercel clears it often, so pages will show "not found".
+  <div v-if="health?.publish === 'none'" class="sbanner">
+    <b>⚠️ Publishing isn't set up yet.</b>
+    Your posts and links are saved in this browser, but Telegram, Facebook and WhatsApp can only see them once they're published to GitHub.
     <details>
-      <summary>How to fix (2 minutes)</summary>
+      <summary>How to set it up (3 minutes)</summary>
       <ol>
-        <li>In Vercel, open your project → <b>Storage</b> → <b>Create Database</b> → choose <b>Upstash for Redis</b> (free) → connect it to this project. Any Redis that gives a <code>REDIS_URL</code> also works.</li>
-        <li>Open <b>Deployments</b> → ⋯ → <b>Redeploy</b>. New environment variables only apply after a redeploy.</li>
-        <li>This banner disappears once the database is found. Then open <b>Test kit</b> and click <b>Create sample posts &amp; links</b> again.</li>
+        <li>On GitHub, open <b>Settings → Developer settings → Fine-grained tokens → Generate new token</b>. Choose <b>Only select repositories</b> → your <code>meta-tool</code> repo, and under <b>Repository permissions</b> set <b>Contents: Read and write</b>.</li>
+        <li>In Vercel → your project → <b>Settings → Environment Variables</b>, add <code>NUXT_GITHUB_TOKEN</code> (the token) and <code>NUXT_GITHUB_REPO</code> (e.g. <code>KheangLov/meta-tool</code>).</li>
+        <li><b>Redeploy</b>. Then open each item and click <b>retry</b> next to "Not published", or just save again.</li>
       </ol>
-      <p v-if="health.storageHints.length" class="small">Database-like variables found but not usable: <code>{{ health.storageHints.join(', ') }}</code>. Make sure there's a <code>…_REST_URL</code> + <code>…_REST_TOKEN</code> pair, or a <code>REDIS_URL</code> starting with <code>redis://</code>.</p>
-      <p class="small">The built-in sample pages (<code>/p/sample-…</code>, <code>/s/test-…</code>) always open, even without a database.</p>
+      <p class="small">Published files go to the <code>published-data</code> branch, which Vercel is set not to deploy. The built-in sample pages work without any of this.</p>
     </details>
   </div>
 </template>

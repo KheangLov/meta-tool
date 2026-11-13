@@ -31,20 +31,10 @@ export const SLUG_RE = /^[a-zA-Z0-9_-]{3,64}$/
 export const BOT_RE =
   /TelegramBot|facebookexternalhit|Facebot|meta-externalagent|Twitterbot|WhatsApp|Slackbot|Discordbot|LinkedInBot|SkypeUriPreview|vkShare|Viber|Line\/|redditbot|Pinterest|Embedly|Iframely|Googlebot|bingbot/i
 
-export const linkStore = () => useStorage<LinkMeta>('links')
-
+/** A published link (from GitHub), or null */
 export async function getLink(slug: string | undefined) {
   if (!slug || !SLUG_RE.test(slug)) return null
-  return await linkStore().getItem(slug)
-}
-
-export async function listLinks() {
-  const store = linkStore()
-  const keys = await store.getKeys()
-  const items = await Promise.all(keys.map((k) => store.getItem(k)))
-  return items
-    .filter((x): x is LinkMeta => !!x)
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  return await readJson<LinkMeta>(`published/links/${slug}.json`)
 }
 
 export function randomSlug(len = 7) {
@@ -116,22 +106,6 @@ export function previewFromPost(post: Post): Pick<LinkMeta, (typeof PREVIEW_FIEL
 /** True when anything Telegram would show is different */
 export function linkPreviewDiffers(a: LinkMeta, b: LinkMeta) {
   return PREVIEW_FIELDS.some((k) => a[k] !== b[k]) || !sameExtra(a.extra, b.extra) || !sameOverrides(a.platforms, b.platforms)
-}
-
-/** Copies a post's preview into every share link that follows it. Returns the links whose preview changed. */
-export async function syncLinksForPost(post: Post) {
-  const changed: LinkMeta[] = []
-  for (const link of await listLinks()) {
-    if (link.postSlug !== post.slug || !link.syncWithPost) continue
-    const next = { ...link, ...previewFromPost(post) }
-    if (linkPreviewDiffers(next, link)) {
-      next.version = link.version + 1
-      next.updatedAt = new Date().toISOString()
-      await linkStore().setItem(link.slug, next)
-      changed.push(next)
-    }
-  }
-  return changed
 }
 
 /** Finds our own link or post behind a URL on this site, so we know what Telegram *should* show. */

@@ -50,30 +50,12 @@ export function cleanSendOptions(o: any): SendOptions {
   }
 }
 
-export const sentStore = () => useStorage<SentRecord[]>('sent')
-const key = (owner: string) => owner.replace(/[^a-zA-Z0-9_-]/g, '_')
-export async function listSent(owner: string) {
-  return (await sentStore().getItem(key(owner))) || []
-}
-export async function saveSent(owner: string, list: SentRecord[]) {
-  await sentStore().setItem(key(owner), list)
-}
+export interface Target { url: string; title: string; description: string }
 
-/** The newest URL for a link/post: always includes the current ?v= so Telegram fetches a fresh preview */
-export async function latestTarget(owner: string, origin: string) {
-  const [kind, slug] = owner.split(':')
-  if (kind === 'link') {
-    const l = await getLink(slug)
-    if (!l) throw createError({ statusCode: 404, statusMessage: 'Link not found' })
-    return { url: `${origin}/s/${l.slug}${l.version > 1 ? `?v=${l.version}` : ''}`, title: l.title, description: l.description }
-  }
-  if (kind === 'post') {
-    const p = await getPost(slug)
-    if (!p) throw createError({ statusCode: 404, statusMessage: 'Post not found' })
-    const v = p.version || 1
-    return { url: `${origin}/p/${p.slug}${v > 1 ? `?v=${v}` : ''}`, title: p.title, description: p.excerpt }
-  }
-  throw createError({ statusCode: 400, statusMessage: 'owner must be link:<slug> or post:<slug>' })
+/** Validates the {url,title,description} the browser sends for the newest version of a link/post */
+export function cleanTarget(t: any): Target {
+  if (!t || !isHttpUrl(t.url)) throw createError({ statusCode: 400, statusMessage: 'target.url must be a full http(s) URL' })
+  return { url: String(t.url), title: String(t.title || '').slice(0, 500), description: String(t.description || '').slice(0, 2000) }
 }
 
 export function renderTemplate(template: string, t: { url: string; title: string; description: string }, html: boolean) {

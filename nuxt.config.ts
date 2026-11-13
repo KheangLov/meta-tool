@@ -19,6 +19,11 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // Set NUXT_ADMIN_TOKEN in Vercel → Project → Settings → Environment Variables
     adminToken: '',
+    // Publishing to GitHub (see README → "Publishing to GitHub")
+    githubToken: '',
+    githubRepo: '',
+    githubBranch: 'published-data',
+    githubApi: '',
     // Telegram user account used to talk to @WebpageBot (see README → "Connect Telegram")
     telegramApiId: '',
     telegramApiHash: '',
