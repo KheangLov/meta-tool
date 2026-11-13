@@ -1,0 +1,18 @@
+{
+  "slug": "test-khmer",
+  "targetUrl": "https://meta-tool-smoky.vercel.app/p/sample-khmer",
+  "siteName": "ហាងអង្គរ",
+  "title": "បញ្ចុះតម្លៃ ៣០% លើអាវភ្លៀងទាំងអស់",
+  "description": "ដឹកជញ្ជូនឥតគិតថ្លៃក្នុងរាជធានីភ្នំពេញ រហូតដល់ថ្ងៃទី៣០ ខែវិច្ឆិកា។",
+  "image": "https://meta-tool-smoky.vercel.app/test/large-green-1200x630.jpg",
+  "imageStyle": "large",
+  "extra": {
+    "author": "ក្រុមសាកល្បង"
+  },
+  "platforms": {},
+  "version": 1,
+  "postSlug": "sample-khmer",
+  "syncWithPost": false,
+  "createdAt": "2026-11-12T00:00:00.000Z",
+  "updatedAt": "2026-11-13T15:51:12.299Z"
+}
