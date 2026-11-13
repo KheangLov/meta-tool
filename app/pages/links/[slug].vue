@@ -138,6 +138,7 @@ const view = computed(() => mergeOverride(
   draft.platforms[overrideKey(app.value)],
 ))
 const mockPlain = computed(() => plainMessage(mockText.value))
+const notes = computed(() => appNotes(app.value, view.value, { imageStyle: draft.imageStyle, themeColor: draft.extra.themeColor, author: draft.extra.author, waBytes: waImageBytes.value }))
 watch(app, (a) => { overrideTab.value = overrideKey(a) })
 
 function useWhatsAppImage(url: string) {
@@ -253,6 +254,9 @@ const imageWarning = computed(() => {
 
     <!-- FORM -->
     <section class="ed-form">
+      <LiveDock v-model:app="app" :platforms="draft.platforms" :notes="notes">
+        <AppPreview :app="app" :theme="theme" :url="currentShare" :view="view" :image-style="draft.imageStyle" :text="mockText" :plain="mockPlain" :extra="draft.extra" :author="draft.extra.author" :wa-bytes="waImageBytes" :send="sendOpts" />
+      </LiveDock>
       <div class="group">
         <h3>Where it goes</h3>
         <div class="field">
@@ -266,45 +270,22 @@ const imageWarning = computed(() => {
         </SqAlert>
         <div v-if="link.postSlug" class="syncbox">
           <div class="row between"><span>Use the preview of post <NuxtLink :to="`/posts/${link.postSlug}`">{{ link.postSlug }}</NuxtLink></span><SqSwitch v-model="syncDraft" inset aria-label="Use the post's preview" /></div>
-          <p v-if="syncDraft" class="muted small">Edit the post to change this link's preview. Untick to give the link its own.</p>
+          <p v-if="syncDraft" class="small">The fields below are locked because this link copies its post.</p>
+          <div v-if="syncDraft" class="row wrap">
+            <SqBtn color="primary" variant="flat" size="small" @click="syncDraft = false">Give this link its own preview</SqBtn>
+            <SqBtn variant="text" size="small" :to="`/posts/${link.postSlug}`">Edit the post</SqBtn>
+          </div>
         </div>
       </div>
 
+      <ScopedFields
+        v-model:platforms="draft.platforms" v-model:app="app" v-model:extra="draft.extra" v-model:image-style="draft.imageStyle"
+        :base="{ siteName: draft.siteName, title: draft.title, description: draft.description, image: draft.image }"
+        :disabled="syncDraft" :notes="notes" :image-warning="imageWarning && imageInfo?.error ? imageWarning : ''"
+        @base="(k, v) => (draft[k] = v)"
+      />
       <fieldset class="plain" :disabled="syncDraft">
         <div class="group">
-          <h3>What apps show</h3>
-          <div class="fields">
-            <AppField v-model="draft.siteName" label="Site name" placeholder="My Shop" counter :disabled="syncDraft" />
-            <AppField v-model="draft.title" label="Title" placeholder="Headline shown in bold" :counter="90" :disabled="syncDraft" />
-            <AppField v-model="draft.description" multiline label="Description" placeholder="A sentence or two" :rows="3" :counter="300" :disabled="syncDraft" />
-          </div>
-        </div>
-
-        <div class="group">
-          <h3>Image</h3>
-          <div class="field">
-            <div class="row">
-              <AppField v-model="draft.image" class="grow" label="Image URL" input-type="url" inputmode="url" placeholder="Paste an image link, 1200 × 630 works best" hide-details :disabled="syncDraft" />
-              <TestImagePicker @pick="draft.image = $event" />
-            </div>
-            <ImageUpload @uploaded="draft.image = $event" />
-            <small v-if="imageWarning && imageInfo?.error" class="hint warn">{{ imageWarning }}</small>
-            <ImageCheck :url="draft.image" />
-          </div>
-          <div class="field">
-            <span>Image size in the preview</span>
-            <div class="seg">
-              <button :class="{ on: draft.imageStyle === 'large' }" @click="draft.imageStyle = 'large'">Large</button>
-              <button :class="{ on: draft.imageStyle === 'small' }" @click="draft.imageStyle = 'small'">Small thumbnail</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="group">
-          <PlatformOverridesForm
-            v-model="draft.platforms" v-model:tab="overrideTab"
-            :base="{ siteName: draft.siteName, title: draft.title, description: draft.description, image: draft.image }"
-          />
           <PreviewExtras v-model="draft.extra" :image-size="imageInfo && !imageInfo.error ? imageInfo : null" />
         </div>
       </fieldset>
@@ -339,6 +320,7 @@ const imageWarning = computed(() => {
         <LinkedInPreview v-if="app === 'linkedin'" :theme="theme" :url="currentShare" :title="view.title" :image="view.image" :text="mockPlain" />
         <DiscordPreview v-if="app === 'discord'" :theme="theme" :url="currentShare" :site-name="view.siteName" :title="view.title" :description="view.description" :image="view.image" :image-style="draft.imageStyle" :theme-color="draft.extra.themeColor" />
         <SlackPreview v-if="app === 'slack'" :theme="theme" :url="currentShare" :site-name="view.siteName" :title="view.title" :description="view.description" :image="view.image" :image-style="draft.imageStyle" :author="draft.extra.author" />
+        <div v-if="notes.length" class="stage-notes"><span v-for="n in notes" :key="n.text" :class="n.level">{{ n.text }}</span></div>
         <p class="stage-note">A close copy of the app's layout<span v-if="dirty">, showing your unsaved changes</span>. The app makes the final call, such as shrinking an image to a thumbnail.</p>
       </div>
 

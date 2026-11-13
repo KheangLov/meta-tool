@@ -59,6 +59,13 @@ A bot can't post to Saved Messages, and it can only message a person who has sta
 - **Phones and tablets:** a compact floating, frosted tab bar at the bottom (the active pill springs to the tab you tap, and you can drag it along the bar, iOS-style) switches between Links, Posts, Test kit and Settings. In an editor, the **Edit / Preview / Share** switch shows one part at a time, and the **Publish** bar appears as soon as you change something.
 - **Settings** holds the admin token, the list of connections, and the GitHub connection check. The header badge shows the publishing state (*Publishing on*, *N unpublished*, *Not publishing*) and opens Settings.
 
+## Live preview while you edit
+
+- **Desktop:** the preview sits beside the form and follows every keystroke. Tabs switch between Telegram, Facebook, Messenger, WhatsApp, LinkedIn, Discord and Slack.
+- **Phones and tablets:** a live preview stays pinned above the form in the Edit view. Pick the app on top; hide it with the arrow. With the keyboard up it shrinks to half size so the card and the field are both visible.
+- **Edit for all apps or one app:** under *What apps show*, pick **All apps** or one app. With an app picked, the same title, text and image fields write that app's own version, and the preview turns to that app. A dot marks apps that have their own version.
+- **Live remarks** under the preview say how the selected app will treat what you typed (Discord trimming a long title, WhatsApp dropping a heavy image, LinkedIn hiding the description).
+
 ## Testing previews in every app
 
 - **Test in the real apps** (in each editor, and on the Test kit page): one-tap buttons put the newest link into Telegram, Facebook, Messenger, WhatsApp, X and LinkedIn. On a phone, **Share…** opens the system share sheet for any other app.

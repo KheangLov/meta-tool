@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /** What each app allows in a link preview. `only` shows one app, opened. */
-const props = defineProps<{ only?: string }>()
+const props = defineProps<{ only?: string; closed?: boolean }>()
 const list = computed(() => (props.only ? APP_GUIDE.filter((a) => a.id === props.only) : APP_GUIDE))
 const parts: { key: 'shows' | 'limits' | 'refresh' | 'test' | 'cant'; label: string }[] = [
   { key: 'shows', label: 'You can set' },
@@ -13,7 +13,7 @@ const parts: { key: 'shows' | 'limits' | 'refresh' | 'test' | 'cant'; label: str
 
 <template>
   <div class="guide">
-    <details v-for="a in list" :key="a.id" :open="!!only">
+    <details v-for="a in list" :key="a.id" :open="!!only && !closed">
       <summary>{{ only ? `What ${a.name} allows` : a.name }}</summary>
       <dl>
         <template v-for="p in parts" :key="p.key">

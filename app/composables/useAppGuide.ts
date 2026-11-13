@@ -116,3 +116,42 @@ export function shareTargets(url: string, text = '', fbAppId = ''): ShareTarget[
     { id: 'linkedin', label: 'LinkedIn', href: `https://www.linkedin.com/sharing/share-offsite/?url=${e(url)}` },
   ]
 }
+
+export interface AppNote { level: 'warn' | 'info'; text: string }
+const utf8 = (s: string) => new TextEncoder().encode(s || '').length
+
+/** Live remarks about how the selected app will treat what you typed (shown under the preview while editing) */
+export function appNotes(
+  app: PreviewApp,
+  v: { siteName: string; title: string; description: string; image: string },
+  o: { imageStyle?: 'large' | 'small'; themeColor?: string; author?: string; waBytes?: number } = {},
+): AppNote[] {
+  const out: AppNote[] = []
+  const warn = (text: string) => out.push({ level: 'warn', text })
+  const info = (text: string) => out.push({ level: 'info', text })
+  if (!v.title) warn('No title yet')
+  if (!v.image) info(app === 'facebook' || app === 'messenger' ? 'No image: a small card or a bare link' : 'No image: a text-only card')
+  if (app === 'telegram' && v.image && o.imageStyle === 'small') info('Small thumbnail beside the text')
+  if (app === 'facebook' && v.description) info('Phones often hide the description')
+  if (app === 'messenger') info('Uses the Facebook version')
+  if (app === 'whatsapp') {
+    const kb = Math.round((o.waBytes || 0) / 1024)
+    if (kb > 600) warn(`Image is ${kb} KB: WhatsApp drops images over 600 KB`)
+    else if (kb > 300) warn(`Image is ${kb} KB: under 300 KB is safest`)
+  }
+  if (app === 'linkedin' && v.description) info('LinkedIn hides the description')
+  if (app === 'discord') {
+    const t = utf8(v.title)
+    const d = utf8(v.description)
+    if (t > 70) warn(`Title is ${t} of 70 bytes: Discord trims it`)
+    if (d > 350) warn(`Description is ${d} of 350 bytes: Discord trims it`)
+    if (v.siteName.length > 256) warn('Site name over 256 characters: no preview')
+    if (!o.themeColor) info('No accent colour: grey bar')
+  }
+  if (app === 'slack' && o.author && !/^https?:\/\//.test(o.author)) info(`Shows "Written by ${o.author}"`)
+  return out
+}
+
+export const PLATFORM_LABEL: Record<Platform, string> = {
+  telegram: 'Telegram', facebook: 'Facebook & Messenger', whatsapp: 'WhatsApp', linkedin: 'LinkedIn', discord: 'Discord', slack: 'Slack',
+}

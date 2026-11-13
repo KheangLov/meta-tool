@@ -76,6 +76,12 @@ const view = computed(() => mergeOverride(
   draft.platforms[overrideKey(app.value)],
 ))
 const mockPlain = computed(() => plainMessage(mockText.value))
+const notes = computed(() => appNotes(app.value, view.value, { imageStyle: draft.imageStyle, themeColor: draft.extra.themeColor, author: draft.extra.author || draft.author, waBytes: waImageBytes.value }))
+function setBase(k: 'siteName' | 'title' | 'description' | 'image', v: string) {
+  if (k === 'description') draft.excerpt = v
+  else if (k === 'image') draft.cover = v
+  else draft[k] = v
+}
 watch(app, (a) => { overrideTab.value = overrideKey(a) })
 function useWhatsAppImage(u: string) {
   draft.platforms = { ...draft.platforms, whatsapp: { ...(draft.platforms.whatsapp || {}), image: u } }
@@ -197,39 +203,21 @@ async function remove() {
     </div>
 
     <section class="ed-form">
+      <LiveDock v-model:app="app" :platforms="draft.platforms" :notes="notes">
+        <AppPreview :app="app" :theme="theme" :url="latestUrl" :view="view" :image-style="draft.imageStyle" :text="mockText" :plain="mockPlain" :extra="draft.extra" :author="draft.extra.author || draft.author" :wa-bytes="waImageBytes" :send="sendOpts" />
+      </LiveDock>
       <div v-if="post.publishError" class="group">
         <SqAlert type="error" variant="tonal" title="Not published" :text="post.publishError">
           <template #append><SqBtn variant="text" color="error" size="small" @click="retryPublish">Retry</SqBtn></template>
         </SqAlert>
       </div>
 
-      <div class="group">
-        <h3>What apps show</h3>
-        <div class="fields">
-          <AppField v-model="draft.siteName" label="Site name" :counter="true" />
-          <AppField v-model="draft.title" label="Title" :counter="90" />
-          <AppField v-model="draft.excerpt" multiline label="Summary" placeholder="One or two sentences shown under the title" :rows="3" :counter="300" />
-        </div>
-      </div>
-
-      <div class="group">
-        <h3>Cover image</h3>
-        <div class="field">
-          <div class="row">
-            <AppField v-model="draft.cover" class="grow" label="Cover image URL" input-type="url" inputmode="url" placeholder="Paste an image link, 1200 × 630 works best" hide-details />
-            <TestImagePicker @pick="draft.cover = $event" />
-          </div>
-          <ImageUpload @uploaded="draft.cover = $event" />
-          <ImageCheck :url="draft.cover" />
-        </div>
-        <div class="field">
-          <span>Image size in the preview</span>
-          <div class="seg">
-            <button :class="{ on: draft.imageStyle === 'large' }" @click="draft.imageStyle = 'large'">Large</button>
-            <button :class="{ on: draft.imageStyle === 'small' }" @click="draft.imageStyle = 'small'">Small thumbnail</button>
-          </div>
-        </div>
-      </div>
+      <ScopedFields
+        v-model:platforms="draft.platforms" v-model:app="app" v-model:extra="draft.extra" v-model:image-style="draft.imageStyle"
+        :base="{ siteName: draft.siteName, title: draft.title, description: draft.excerpt, image: draft.cover }"
+        description-label="Summary" image-label="Cover image" :notes="notes"
+        @base="setBase"
+      />
 
       <div class="group">
         <h3>The page</h3>
@@ -240,10 +228,6 @@ async function remove() {
       </div>
 
       <div class="group">
-        <PlatformOverridesForm
-          v-model="draft.platforms" v-model:tab="overrideTab"
-          :base="{ siteName: draft.siteName, title: draft.title, description: draft.excerpt, image: draft.cover }"
-        />
         <PreviewExtras v-model="draft.extra" :image-size="imageInfo && !imageInfo.error ? imageInfo : null" />
       </div>
     </section>
@@ -275,6 +259,7 @@ async function remove() {
           :video="!!draft.extra.videoUrl" :duration="draft.extra.videoDuration" :audio="!!draft.extra.audioUrl"
           @image-info="imageInfo = $event"
         />
+        <div v-if="notes.length" class="stage-notes"><span v-for="n in notes" :key="n.text" :class="n.level">{{ n.text }}</span></div>
         <p class="stage-note">A close copy of the app's layout<span v-if="dirty">, showing your unsaved changes</span>. The app makes the final call, such as shrinking an image to a thumbnail.</p>
       </div>
 

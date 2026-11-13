@@ -370,3 +370,9 @@ fieldset.plain:disabled .input, fieldset.plain:disabled .seg, fieldset.plain:dis
 .stage-top { gap: 8px; }
 .stage-top .apptabs { flex: 1 1 auto; min-width: 0; }
 .panel-body > .seg { display: flex; }
+
+/* Live remarks under the preview */
+.stage-notes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.stage-notes span { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 99px; background: #2a3630; color: #c9d6cf; }
+.stage-notes span.warn { background: #4a3a12; color: #ffd27a; }
+.syncbox .row.wrap { margin-top: 8px; gap: 8px; }
