@@ -336,6 +336,9 @@ const imageWarning = computed(() => {
         <FacebookPreview v-if="app === 'facebook'" :theme="theme" :url="currentShare" :title="view.title" :description="view.description" :image="view.image" :text="mockPlain.replace(currentShare, '').trim()" />
         <MessengerPreview v-if="app === 'messenger'" :theme="theme" :url="currentShare" :title="view.title" :description="view.description" :image="view.image" :text="mockPlain" />
         <WhatsAppPreview v-if="app === 'whatsapp'" :theme="theme" :url="currentShare" :title="view.title" :description="view.description" :image="view.image" :text="mockPlain" :image-bytes="waImageBytes" />
+        <LinkedInPreview v-if="app === 'linkedin'" :theme="theme" :url="currentShare" :title="view.title" :image="view.image" :text="mockPlain" />
+        <DiscordPreview v-if="app === 'discord'" :theme="theme" :url="currentShare" :site-name="view.siteName" :title="view.title" :description="view.description" :image="view.image" :image-style="draft.imageStyle" :theme-color="draft.extra.themeColor" />
+        <SlackPreview v-if="app === 'slack'" :theme="theme" :url="currentShare" :site-name="view.siteName" :title="view.title" :description="view.description" :image="view.image" :image-style="draft.imageStyle" :author="draft.extra.author" />
         <p class="stage-note">A close copy of the app's layout<span v-if="dirty">, showing your unsaved changes</span>. The app makes the final call, such as shrinking an image to a thumbnail.</p>
       </div>
 
@@ -369,6 +372,8 @@ const imageWarning = computed(() => {
               :dirty="dirty" :connected="fbReady" :page-connected="fbPage" :app-id="fbAppId" :theme="theme" :title="draft.title" :description="draft.description"
             />
           </div>
+
+          <OtherAppPanel v-if="app === 'linkedin' || app === 'discord' || app === 'slack'" :app="app" :primary-url="currentShare" :dirty="dirty" />
 
           <div v-show="app === 'whatsapp'">
             <WhatsAppPanel
@@ -421,7 +426,8 @@ const imageWarning = computed(() => {
         </div>
 
         <div v-show="panel === 'check'" class="panel-body">
-          <AppsCheck :url="currentShare" />
+          <PreviewDoctor :url="currentShare" :slug="link.slug" kind="link" :app="app" :dirty="dirty" :image-style="draft.imageStyle" />
+          <div class="step"><AppsCheck :url="currentShare" /></div>
           <AppVisits :slug="link.slug" kind="link" />
           <div class="step">
             <div class="row between">

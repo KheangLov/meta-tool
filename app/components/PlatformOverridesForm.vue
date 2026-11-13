@@ -8,6 +8,9 @@ const tabs: { id: Platform; label: string }[] = [
   { id: 'telegram', label: 'Telegram' },
   { id: 'facebook', label: 'Facebook & Messenger' },
   { id: 'whatsapp', label: 'WhatsApp' },
+  { id: 'linkedin', label: 'LinkedIn' },
+  { id: 'discord', label: 'Discord' },
+  { id: 'slack', label: 'Slack' },
 ]
 const cur = computed(() => model.value?.[tab.value] || {})
 function set(k: keyof PlatformOverride, v: string) {
@@ -58,7 +61,7 @@ const total = computed(() => tabs.reduce((n, t) => n + count(t.id), 0))
         />
         <SqBtn variant="text" size="small" v-if="cur.image" @click="set('image', '')">Use main image</SqBtn>
       </div>
-      <ImageCheck v-if="cur.image" :url="cur.image" :only="tab === 'facebook' ? ['facebook'] : tab === 'whatsapp' ? ['whatsapp'] : ['telegram']" />
+      <ImageCheck v-if="cur.image" :url="cur.image" :only="[tab]" />
     </div>
   </details>
 </template>
@@ -67,6 +70,6 @@ const total = computed(() => tabs.reduce((n, t) => n + count(t.id), 0))
 .po { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; }
 .po summary { cursor: pointer; font-size: 13px; font-weight: 600; display: flex; gap: 8px; align-items: center; }
 .po[open] summary { margin-bottom: 8px; }
-.tabs { margin-bottom: 12px; flex-wrap: wrap; }
+.tabs { margin-bottom: 12px; }
 .wrap { flex-wrap: wrap; }
 </style>

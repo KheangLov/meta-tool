@@ -65,7 +65,14 @@ A bot can't post to Saved Messages, and it can only message a person who has sta
 - **What each app allows** (Test kit, and per app on the *Update apps* tab): what you can set, the limits, how to update an old preview and how to test, for Telegram, Facebook, Messenger, Instagram DMs & Threads, WhatsApp, X, LinkedIn, Discord, Slack and iMessage.
 - **Check all apps** fetches the link as each of those apps' crawlers and lists what's wrong.
 - **Did the app reach your link?** (Check tab) lists real crawler visits the server saw, so you can tell whether Facebook, WhatsApp and the rest got through. It is kept in memory and resets when the server restarts.
-- **Preview not showing on Facebook or Messenger?** (Update apps → Facebook) maps each Sharing Debugger result to its cause and fix.
+- **Preview not right?** (Check tab) is a guided checker. Pick the app and what you see (no preview, no image, small image, old version, wrong page). It fetches the link as that app, checks the app's image rules and whether the app reached the link, then names the cause and the fix. For Facebook, Messenger and Instagram it ends by asking what the Sharing Debugger says.
+- **LinkedIn, Discord and Slack** are full apps: their own preview tab, their own title/text/image under *Different text or image per app*, image checks, and an *Update apps* tab with LinkedIn's Post Inspector and Discord's Embed Debugger.
+
+| App | Limits the tool checks |
+|---|---|
+| LinkedIn | Image at least 1200 × 627, under 5 MB; narrower than 401 px shows as a thumbnail; kept about a week unless Post Inspector refreshes it |
+| Discord | Title trimmed at 70 bytes, description at 350 bytes; site name up to 256 characters; page and image must load in 10 seconds; `theme-color` must be `#RRGGBB`; kept about 30 minutes |
+| Slack | Tags must be at the start of the page (about 32 KB); Author becomes a "Written by" line; kept about 30 minutes; no refresh tool |
 - **Accent colour** (Advanced) sets `theme-color`, the colour bar on Discord's card.
 
 ## Look and dark mode

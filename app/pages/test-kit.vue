@@ -111,9 +111,13 @@ onMounted(() => { sampleUrl.value = `${location.origin}/s/test-large` })
       <li><b>Video &amp; audio:</b> <code>/s/test-video</code> and <code>/s/test-audio</code> carry og:video / og:audio. Use <i>Show Telegram's copy</i> (Update apps tab) to see the type and duration Telegram stored.</li>
       <li><b>Message options:</b> in any editor, try <i>Larger / Smaller</i> media, <i>Above text</i>, HTML formatting, a hidden link (remove <code>{link}</code>) and <i>No preview</i>. The mock updates as you click. Then <i>Send to Telegram</i> (Saved Messages works well).</li>
       <li><b>Live update of sent messages:</b> send a link from the tool, change its image and publish. The tool edits the sent message so it shows the new preview.</li>
-      <li><b>Per app:</b> paste <code>/s/test-per-app</code> into Telegram, Facebook, Messenger and WhatsApp. Each one should show its own title and image color (blue, red, green).</li>
+      <li><b>Per app:</b> paste <code>/s/test-per-app</code> into Telegram, Facebook, Messenger, WhatsApp, LinkedIn, Discord and Slack. Each one says hello with its own name.</li>
       <li><b>Facebook &amp; Messenger:</b> in an editor, pick the <i>Facebook</i> tab, change something, publish, then <i>Re-scrape on Facebook</i> (needs a Facebook app, see README). Or use the Sharing Debugger link.</li>
       <li><b>WhatsApp image size:</b> on the WhatsApp tab, use <i>Make a WhatsApp-safe copy</i> on the 2400×1260 image and compare the size check before and after.</li>
+      <li><b>LinkedIn:</b> open a link's <i>Update apps → LinkedIn</i> tab and use <i>Post Inspector</i>. Try the 200×200 test image: LinkedIn shows it as a thumbnail.</li>
+      <li><b>Discord:</b> set an <i>Accent colour</i> under Advanced, publish and paste the link in Discord. Try <code>/s/test-long-text</code>: Discord trims the title at 70 bytes.</li>
+      <li><b>Slack:</b> set an <i>Author</i> under Advanced and paste the link in a DM to yourself. Slack adds a "Written by" line.</li>
+      <li><b>When a preview is wrong:</b> in any editor, open <i>Check</i> and use <i>Preview not right?</i></li>
       <li><b>People vs Telegram:</b> tap a <code>/s/</code> link on your phone. You should land on the post page, not on the preview page.</li>
     </ol>
   </section>

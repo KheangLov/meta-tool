@@ -90,26 +90,7 @@ defineExpose({ refresh })
     <h2>Update on Facebook &amp; Messenger</h2>
     <p class="muted small">Facebook and Messenger share one saved copy of each link. Re-scraping updates it for new shares. Posts and messages that are already out usually keep their old card.</p>
 
-    <details class="fix">
-      <summary>Preview not showing on Facebook or Messenger?</summary>
-      <ol class="small">
-        <li><b>Publish</b>, then run <i>Check all apps</i> on the Check tab. Fix anything red on the Facebook line first.</li>
-        <li>Open the <a :href="debugger_" target="_blank" rel="noopener">Sharing Debugger</a>, log in and press <i>Scrape Again</i>. What it says tells you the cause:</li>
-      </ol>
-      <dl class="small">
-        <dt>It shows your title and image</dt>
-        <dd>Facebook can read the link. Messenger was holding an old copy: send the newest <code>?v=</code> link.</dd>
-        <dt>"Bad HTTP response code" 403</dt>
-        <dd>Vercel's firewall stopped Facebook before it reached this site. Check <i>Did the app reach your link?</i> on the Check tab: no Facebook visit confirms it. In Vercel → Firewall, turn off Bot Protection and Attack Challenge Mode, then scrape again.</dd>
-        <dt>"Goes against our Community Standards" or the link can't be shared</dt>
-        <dd>Facebook is blocking the address itself. Free shared addresses like <code>*.vercel.app</code> get flagged. Add your own domain in Vercel → Domains.</dd>
-        <dt>Title is right but there's no image</dt>
-        <dd>The image is too small (under 200 × 200), over 8 MB, or Facebook couldn't download it. The Check tab names which.</dd>
-        <dt>It shows the target page's preview, not yours</dt>
-        <dd>You shared the target address. Share the <code>/s/…</code> link from this tool.</dd>
-      </dl>
-      <p class="muted small">Messenger has no checker of its own. It uses Facebook's saved copy, so once the Sharing Debugger is right, Messenger is too.</p>
-    </details>
+    <p class="fixnote small">Preview not showing? Open the <b>Check</b> tab and use <i>Preview not right?</i> It finds the cause for Facebook and Messenger.</p>
 
     <div class="step">
       <b>A. Share the newest link</b>
@@ -181,12 +162,7 @@ defineExpose({ refresh })
 </template>
 
 <style scoped>
-.fix { border: 1px solid color-mix(in srgb, var(--amber) 45%, var(--rule)); background: var(--amber-soft); color: var(--amber-ink); border-radius: var(--r-control); padding: 10px 12px; margin: 12px 0; }
-.fix summary { cursor: pointer; font-weight: 650; }
-.fix ol { margin: 10px 0 6px; padding-left: 18px; display: grid; gap: 4px; }
-.fix dl { margin: 0; display: grid; gap: 2px; }
-.fix dt { font-weight: 650; margin-top: 8px; }
-.fix dd { margin: 0; }
+.fixnote { background: var(--amber-soft); color: var(--amber-ink); border-radius: var(--r-control); padding: 8px 12px; }
 .fbrow { margin-top: 10px; display: grid; gap: 6px; }
 .diffs { margin: 0; padding-left: 18px; color: var(--warn); }
 .sentrow { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; margin-top: 6px; }

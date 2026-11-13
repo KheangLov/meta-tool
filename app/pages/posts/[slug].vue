@@ -264,6 +264,9 @@ async function remove() {
         <FacebookPreview v-if="app === 'facebook'" :theme="theme" :url="latestUrl" :title="view.title" :description="view.description" :image="view.image" :text="mockPlain.replace(latestUrl, '').trim()" :page-name="draft.siteName || 'Your Page'" />
         <MessengerPreview v-if="app === 'messenger'" :theme="theme" :url="latestUrl" :title="view.title" :description="view.description" :image="view.image" :text="mockPlain" />
         <WhatsAppPreview v-if="app === 'whatsapp'" :theme="theme" :url="latestUrl" :title="view.title" :description="view.description" :image="view.image" :text="mockPlain" :image-bytes="waImageBytes" />
+        <LinkedInPreview v-if="app === 'linkedin'" :theme="theme" :url="latestUrl" :title="view.title" :image="view.image" :text="mockPlain" />
+        <DiscordPreview v-if="app === 'discord'" :theme="theme" :url="latestUrl" :site-name="view.siteName" :title="view.title" :description="view.description" :image="view.image" :image-style="draft.imageStyle" :theme-color="draft.extra.themeColor" />
+        <SlackPreview v-if="app === 'slack'" :theme="theme" :url="latestUrl" :site-name="view.siteName" :title="view.title" :description="view.description" :image="view.image" :image-style="draft.imageStyle" :author="draft.extra.author || draft.author" />
         <TelegramPreview
           v-show="app === 'telegram'"
           :theme="theme" :url="latestUrl" :site-name="view.siteName" :title="view.title"
@@ -329,6 +332,8 @@ async function remove() {
               :dirty="dirty" :connected="fbReady" :page-connected="fbPage" :app-id="fbAppId" :theme="theme" :title="draft.title" :description="draft.excerpt"
             />
           </div>
+          <OtherAppPanel v-if="app === 'linkedin' || app === 'discord' || app === 'slack'" :app="app" :primary-url="latestUrl" :dirty="dirty" />
+
           <div v-show="app === 'whatsapp'">
             <WhatsAppPanel
               :primary-url="latestUrl" :image="view.image" :text="mockPlain" :has-override-image="!!draft.platforms.whatsapp?.image"
@@ -338,7 +343,8 @@ async function remove() {
         </div>
 
         <div v-show="panel === 'check'" class="panel-body">
-          <AppsCheck :url="latestUrl" />
+          <PreviewDoctor :url="latestUrl" :slug="slug" kind="post" :app="app" :dirty="dirty" :image-style="draft.imageStyle" />
+          <div class="step"><AppsCheck :url="latestUrl" /></div>
           <AppVisits :slug="slug" kind="post" />
         </div>
       </div>

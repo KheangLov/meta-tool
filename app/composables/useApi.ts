@@ -58,7 +58,7 @@ export interface Post {
 }
 
 /** Same shapes as server/utils/platforms.ts */
-export type Platform = 'telegram' | 'facebook' | 'whatsapp'
+export type Platform = 'telegram' | 'facebook' | 'whatsapp' | 'linkedin' | 'discord' | 'slack'
 export interface PlatformOverride { siteName?: string; title?: string; description?: string; image?: string }
 export type PlatformOverrides = Partial<Record<Platform, PlatformOverride>>
 
@@ -116,11 +116,14 @@ export function mergeOverride(base: { siteName: string; title: string; descripti
   return { siteName: o?.siteName || base.siteName, title: o?.title || base.title, description: o?.description || base.description, image: o?.image || base.image }
 }
 
-export type PreviewApp = 'telegram' | 'facebook' | 'messenger' | 'whatsapp'
+export type PreviewApp = 'telegram' | 'facebook' | 'messenger' | 'whatsapp' | 'linkedin' | 'discord' | 'slack'
 export const PREVIEW_APPS: { id: PreviewApp; label: string }[] = [
   { id: 'telegram', label: 'Telegram' },
   { id: 'facebook', label: 'Facebook' },
   { id: 'messenger', label: 'Messenger' },
   { id: 'whatsapp', label: 'WhatsApp' },
+  { id: 'linkedin', label: 'LinkedIn' },
+  { id: 'discord', label: 'Discord' },
+  { id: 'slack', label: 'Slack' },
 ]
 export const overrideKey = (app: PreviewApp): Platform => (app === 'messenger' ? 'facebook' : app)

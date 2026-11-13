@@ -34,7 +34,7 @@ const time = (s: string) => new Date(s).toLocaleTimeString()
       <p v-if="!data.visits.length" class="small">No app has fetched this link since {{ time(data.since) }}.</p>
       <p class="muted small">
         The list is kept in memory and resets when the server restarts, so an old visit can be missing.
-        If you just shared the link and the app isn't listed, its crawler never got through: see <i>Preview not showing?</i> on the Update apps tab.
+        If you just shared the link and the app isn't listed, its crawler never got through: use <i>Preview not right?</i> above.
       </p>
     </template>
   </div>

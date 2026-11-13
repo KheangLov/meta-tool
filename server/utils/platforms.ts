@@ -1,6 +1,6 @@
 /** Per-app overrides: each app's crawler can get its own title, description, image and site name. */
-export type Platform = 'telegram' | 'facebook' | 'whatsapp'
-export const PLATFORMS: Platform[] = ['telegram', 'facebook', 'whatsapp']
+export type Platform = 'telegram' | 'facebook' | 'whatsapp' | 'linkedin' | 'discord' | 'slack'
+export const PLATFORMS: Platform[] = ['telegram', 'facebook', 'whatsapp', 'linkedin', 'discord', 'slack']
 
 export interface PlatformOverride { siteName?: string; title?: string; description?: string; image?: string }
 export type PlatformOverrides = Partial<Record<Platform, PlatformOverride>>
@@ -36,6 +36,9 @@ export function platformFromUA(ua: string): Platform | null {
   if (/TelegramBot/i.test(ua)) return 'telegram'
   if (/WhatsApp/i.test(ua)) return 'whatsapp'
   if (/facebookexternalhit|Facebot|meta-externalagent|meta-externalfetcher/i.test(ua)) return 'facebook'
+  if (/LinkedInBot/i.test(ua)) return 'linkedin'
+  if (/Discordbot/i.test(ua)) return 'discord'
+  if (/Slackbot|Slack-ImgProxy/i.test(ua)) return 'slack'
   return null
 }
 
@@ -54,6 +57,9 @@ export const CRAWLER_UA: Record<Platform, string> = {
   telegram: 'TelegramBot (like TwitterBot)',
   facebook: 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
   whatsapp: 'WhatsApp/2.24.20.80 A',
+  linkedin: 'LinkedInBot/1.0 (compatible; Mozilla/5.0; Apache-HttpClient +http://www.linkedin.com)',
+  discord: 'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)',
+  slack: 'Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)',
 }
 
 /** Turns a query value like ?as=whatsapp into a Platform (or null) */

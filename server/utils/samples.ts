@@ -135,11 +135,14 @@ export const PER_APP_LINK = {
   slug: 'test-per-app',
   case: 'Different title and image in each app',
   target: 'sample-large',
-  base: { siteName: 'Angkor Shop', title: 'One link, a different preview in every app', description: 'Open this link in Telegram, Facebook, Messenger and WhatsApp to compare.', image: 'large-blue-1200x630.jpg' },
+  base: { siteName: 'Angkor Shop', title: 'One link, a different preview in every app', description: 'Open this link in each app to compare.', image: 'large-blue-1200x630.jpg' },
   platforms: {
     telegram: { title: '👋 Hello Telegram', description: 'This title and image are only for Telegram.', image: 'large-blue-1200x630.jpg' },
     facebook: { title: '👋 Hello Facebook & Messenger', description: 'Facebook and Messenger read this version.', image: 'large-red-1200x630.jpg' },
     whatsapp: { title: '👋 Hello WhatsApp', description: 'WhatsApp gets a small, fast image.', image: 'large-green-1200x630.jpg' },
+    linkedin: { title: '👋 Hello LinkedIn', description: 'LinkedIn reads this version.', image: 'large-red-1200x630.jpg' },
+    discord: { title: '👋 Hello Discord', description: 'Discord reads this version.', image: 'large-green-1200x630.jpg' },
+    slack: { title: '👋 Hello Slack', description: 'Slack reads this version.', image: 'large-blue-1200x630.jpg' },
   } as Record<string, { title: string; description: string; image: string }>,
 }
 

@@ -44,6 +44,16 @@ export default defineEventHandler(async (event) => {
         if (t['article:author'] && !/^https?:\/\//.test(t['article:author'])) err('article:author must be a profile URL for Facebook.')
         if (t['og:image'] && !(t['og:image:width'] && t['og:image:height'])) warn('No og:image:width/height, so Facebook may show no image on the first share.')
       }
+      const bytesOf = (s?: string) => Buffer.byteLength(s || '')
+      if (app.id === 'linkedin') for (const req of ['og:title', 'og:image', 'og:description', 'og:url']) if (!t[req]) warn(`LinkedIn expects ${req}.`)
+      if (app.id === 'discord') {
+        if (bytesOf(t['og:title']) > 70) warn('Title is over 70 bytes, so Discord trims it.', 'Shorten the title, or give Discord its own under "Different text or image per app". Khmer letters count as 3 bytes each.')
+        if (bytesOf(t['og:description']) > 350) warn('Description is over 350 bytes, so Discord trims it.')
+        if ((t['og:site_name'] || '').length > 256) err('Site name is over 256 characters, so Discord shows no preview.')
+        if (t['theme-color'] && !/^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(t['theme-color'])) warn('Accent colour must look like #RRGGBB for Discord.')
+        if (r.ms > 8000) warn('The page is slow. Discord gives up after 10 seconds.')
+      }
+      if (app.id === 'slack' && (r.bytes || 0) > 32 * 1024) warn('Tags may be too far down the page: Slack reads only the start of it (about 32 KB).')
       if (app.id === 'x' && !t['twitter:card']) warn('No twitter:card, so X picks the card size itself.')
       if (app.id === 'whatsapp' && (r.bytes || 0) > 300 * 1024) warn('Tags may be too far down the page: WhatsApp reads about the first 300 KB.')
       if (app.id === 'inapp' && !t['og:title']) err('Apps that fetch links from the phone don\'t get your preview.')
@@ -52,7 +62,7 @@ export default defineEventHandler(async (event) => {
           const img = await fetchImage(t['og:image'])
           const dims = imageDimensions(img.data)
           const info = { bytes: img.data.length, width: dims?.width || 0, height: dims?.height || 0, type: detectImageType(img.data)?.type || img.type, https: img.finalUrl.startsWith('https:') }
-          const key = app.id === 'telegram' || app.id === 'whatsapp' ? app.id : 'facebook'
+          const key = ['telegram', 'whatsapp', 'linkedin', 'discord', 'slack'].includes(app.id) ? app.id : 'facebook'
           const c = checkImage(info).find((x) => x.platform === key)
           if (c && c.verdict !== 'ok') issues.push({ level: c.verdict === 'error' ? 'error' : 'warn', text: `Image: ${c.notes.join('; ')}`, fix: app.id === 'whatsapp' && /KB|px|4:1/.test(c.notes.join(' ')) ? 'Use "Make a WhatsApp-safe copy" on the WhatsApp tab.' : /https/.test(c.notes.join(' ')) ? 'Use an https image URL (on Vercel, your own images already are).' : undefined })
         } catch (e: any) {
@@ -70,6 +80,7 @@ export default defineEventHandler(async (event) => {
     tools: {
       facebook: `https://developers.facebook.com/tools/debug/?q=${encodeURIComponent(url)}`,
       linkedin: `https://www.linkedin.com/post-inspector/inspect/${encodeURIComponent(url)}`,
+      discord: 'https://discord.com/developers/embeds',
     },
   }
 })

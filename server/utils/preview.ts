@@ -57,7 +57,8 @@ export function cleanExtra(v: any): PreviewExtra {
     tgChannel: str(v.tgChannel, 80).replace(/^(https?:\/\/)?(www\.)?(t|telegram)\.me\//i, '@').replace(/[^@A-Za-z0-9_]/g, ''),
   }
   const colour = str(v.themeColor, 9)
-  if (/^#[0-9a-fA-F]{3,8}$/.test(colour)) out.themeColor = colour
+  // Discord accepts #RRGGBB or #RRGGBBAA only
+  if (/^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(colour)) out.themeColor = colour
   if (out.tgChannel && !out.tgChannel.startsWith('@')) out.tgChannel = '@' + out.tgChannel
   // Drop empty values so comparisons and storage stay tidy
   for (const k of Object.keys(out) as (keyof PreviewExtra)[]) if (out[k] === '' || out[k] === undefined) delete out[k]
@@ -127,6 +128,9 @@ export function renderMetaTags(p: {
     tag('twitter:description', p.description, 'name'),
     tag('twitter:image', p.image, 'name'),
     tag('twitter:image:alt', p.image ? x.imageAlt : '', 'name'),
+    // Slack shows these two as an extra "Written by" field under the description
+    x.author && !/^https?:\/\//.test(x.author) ? tag('twitter:label1', 'Written by', 'name') : '',
+    x.author && !/^https?:\/\//.test(x.author) ? tag('twitter:data1', x.author, 'name') : '',
     x.videoUrl && isEmbed ? tag('twitter:player', x.videoUrl, 'name') : '',
     x.videoUrl && isEmbed ? tag('twitter:player:width', x.videoWidth || 1280, 'name') : '',
     x.videoUrl && isEmbed ? tag('twitter:player:height', x.videoHeight || 720, 'name') : '',

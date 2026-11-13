@@ -31,7 +31,7 @@ export function imageDimensions(b: Buffer): { width: number; height: number } | 
 }
 
 export type Verdict = 'ok' | 'warn' | 'error'
-export interface PlatformCheck { platform: 'telegram' | 'facebook' | 'whatsapp'; verdict: Verdict; notes: string[] }
+export interface PlatformCheck { platform: Platform; verdict: Verdict; notes: string[] }
 
 /** Checks an image against each app's published guidance */
 export function checkImage(info: { bytes: number; width: number; height: number; type: string; https: boolean }): PlatformCheck[] {
@@ -63,7 +63,29 @@ export function checkImage(info: { bytes: number; width: number; height: number;
   if (bytes > 5 * 1024 * 1024) { tg.verdict = 'warn'; tg.notes.push('Over 5 MB, which may load slowly or be skipped') }
   if (!tg.notes.length) tg.notes.push('Large preview')
 
-  return [tg, fb, wa]
+  // LinkedIn Help: at least 1200 × 627, 1.91:1, 5 MB max; narrower than 401 px shows as a thumbnail
+  const li: PlatformCheck = { platform: 'linkedin', verdict: 'ok', notes: [] }
+  if (!/image\/(jpeg|png|gif)/.test(info.type)) { li.verdict = 'warn'; li.notes.push(`${info.type.replace('image/', '') || 'This type'} may not show: LinkedIn lists JPG, PNG and GIF`) }
+  if (bytes > 5 * 1024 * 1024) { li.verdict = 'error'; li.notes.push('Over 5 MB (LinkedIn limit)') }
+  if (w && w < 401) { li.verdict = li.verdict === 'error' ? 'error' : 'warn'; li.notes.push('Narrower than 401 px, so LinkedIn shows a small thumbnail') }
+  else if (w && h && (w < 1200 || h < 627)) { li.verdict = li.verdict === 'error' ? 'error' : 'warn'; li.notes.push('Under 1200×627, LinkedIn\'s minimum for a sharp large card') }
+  if (!li.notes.length) li.notes.push('Large preview')
+
+  // Discord docs: png, gif, jpg, webp, avif; the whole fetch must finish within 10 seconds
+  const dc: PlatformCheck = { platform: 'discord', verdict: 'ok', notes: [] }
+  if (!/image\/(jpeg|png|gif|webp|avif)/.test(info.type)) { dc.verdict = 'error'; dc.notes.push(`Unsupported type ${info.type || 'unknown'}`) }
+  if (!info.https) { dc.verdict = dc.verdict === 'ok' ? 'warn' : dc.verdict; dc.notes.push('Not https') }
+  if (bytes > 8 * 1024 * 1024) { dc.verdict = dc.verdict === 'ok' ? 'warn' : dc.verdict; dc.notes.push('Very large: Discord gives up after 10 seconds') }
+  if (!dc.notes.length) dc.notes.push('Fine')
+
+  // Slack publishes no image limit; it fetches the image to check it
+  const sl: PlatformCheck = { platform: 'slack', verdict: 'ok', notes: [] }
+  if (!okType) { sl.verdict = 'error'; sl.notes.push(`Unsupported type ${info.type || 'unknown'}`) }
+  if (!info.https) { sl.verdict = sl.verdict === 'ok' ? 'warn' : sl.verdict; sl.notes.push('Not https') }
+  if (bytes > 5 * 1024 * 1024) { sl.verdict = sl.verdict === 'ok' ? 'warn' : sl.verdict; sl.notes.push('Over 5 MB, which may be skipped') }
+  if (!sl.notes.length) sl.notes.push('Fine')
+
+  return [tg, fb, wa, li, dc, sl]
 }
 
 /** Downloads an image (max 15 MB) and returns its bytes and type */

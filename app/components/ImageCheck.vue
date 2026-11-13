@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /** Checks an image URL against Telegram, Facebook/Messenger and WhatsApp rules. */
-interface Check { platform: 'telegram' | 'facebook' | 'whatsapp'; verdict: 'ok' | 'warn' | 'error'; notes: string[] }
+interface Check { platform: Platform; verdict: 'ok' | 'warn' | 'error'; notes: string[] }
 interface Info { bytes: number; width: number; height: number; type: string; checks: Check[] }
 
 const props = defineProps<{ url: string; only?: Check['platform'][] }>()
@@ -29,7 +29,7 @@ watch(() => props.url, (url) => {
   }, 500)
 }, { immediate: true })
 
-const label: Record<Check['platform'], string> = { telegram: 'Telegram', facebook: 'Facebook & Messenger', whatsapp: 'WhatsApp' }
+const label: Record<Check['platform'], string> = { telegram: 'Telegram', facebook: 'Facebook & Messenger', whatsapp: 'WhatsApp', linkedin: 'LinkedIn', discord: 'Discord', slack: 'Slack' }
 const icon = { ok: '✅', warn: '⚠️', error: '❌' }
 const shown = computed(() => (info.value?.checks || []).filter((c) => !props.only || props.only.includes(c.platform)))
 </script>

@@ -365,3 +365,8 @@ fieldset.plain:disabled .input, fieldset.plain:disabled .seg, fieldset.plain:dis
 .ed-switch .sq-tabs { width: 100%; }
 
 .sharebox { border-bottom: 1px solid var(--rule); }
+
+/* Seven app tabs: scroll sideways instead of wrapping */
+.stage-top { gap: 8px; }
+.stage-top .apptabs { flex: 1 1 auto; min-width: 0; }
+.panel-body > .seg { display: flex; }
