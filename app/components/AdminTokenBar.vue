@@ -1,14 +1,12 @@
 <script setup lang="ts">
-const { token, save } = useAdminToken()
-const editing = ref(!token.value)
-const draft = ref(token.value)
-const health = ref<{ publish: string; githubRepo: string; githubBranch: string; adminTokenSet: boolean } | null>(null)
+/** Publishing status in the header. Tapping it opens Settings. Also retries unpublished items quietly. */
+const { token } = useAdminToken()
+const health = ref<{ publish: string; githubRepo: string; githubBranch: string } | null>(null)
 const pending = ref(0)
 const studio = useStudio()
 onMounted(async () => {
   try { health.value = await $fetch('/api/health') } catch {}
   if (health.value?.publish !== 'github' || !token.value) return
-  // Quietly retry anything that failed to publish earlier (e.g. before the token was fixed)
   try {
     const p = await studio.pendingItems()
     if (p.posts.length + p.links.length) await studio.publishPending()
@@ -16,23 +14,19 @@ onMounted(async () => {
     pending.value = left.posts.length + left.links.length
   } catch {}
 })
-function apply() {
-  save(draft.value)
-  editing.value = false
-  refreshNuxtData()
-  location.reload()
-}
+const state = computed(() => {
+  if (!token.value) return { kind: 'warn', text: 'Add admin token' }
+  if (!health.value) return { kind: 'none', text: '' }
+  if (health.value.publish === 'none') return { kind: 'warn', text: 'Not publishing' }
+  if (pending.value) return { kind: 'warn', text: `${pending.value} unpublished` }
+  return { kind: 'ok', text: health.value.publish === 'github' ? 'Publishing on' : 'Local files' }
+})
 </script>
 
 <template>
   <div class="tokenbar">
-    <NuxtLink v-if="health?.publish === 'none'" to="/test-kit#github" class="pill warn" title="Add NUXT_GITHUB_TOKEN and NUXT_GITHUB_REPO to publish">Not publishing</NuxtLink>
-    <NuxtLink v-else-if="health?.publish === 'github'" to="/test-kit#github" class="pill" :class="{ warn: pending > 0 }" :title="`Publishing to ${health.githubRepo} (${health.githubBranch})`">{{ pending ? `${pending} unpublished` : 'GitHub' }}</NuxtLink>
-    <span v-else-if="health" class="pill">Local files</span>
-    <template v-if="editing">
-      <input v-model="draft" type="password" placeholder="Admin token" class="input sm" @keyup.enter="apply" />
-      <button class="btn sm" @click="apply">Save</button>
-    </template>
-    <button v-else class="btn ghost sm" @click="editing = true">🔑 Token</button>
+    <NuxtLink v-if="state.text" to="/settings" class="pill" :class="{ warn: state.kind === 'warn' }" :title="health?.githubRepo ? `Publishing to ${health.githubRepo} (${health.githubBranch})` : ''">
+      <span :class="`pub pub-${state.kind}`">{{ state.text }}</span>
+    </NuxtLink>
   </div>
 </template>

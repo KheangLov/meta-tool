@@ -26,41 +26,38 @@ onMounted(load)
 </script>
 
 <template>
+  <div class="page-head">
+    <div>
+      <h1>Posts</h1>
+      <p>Simple article pages hosted on your site, each with its own preview. Share a post directly or make a short link for it.</p>
+    </div>
+  </div>
+
   <section class="card">
-    <h1>New post</h1>
-    <p class="muted">A simple article page on this site, with its own preview tags. Share it directly (<code>/p/…</code>) or point a share link at it.</p>
     <form class="create" @submit.prevent="create">
-      <label class="field grow">
+      <label class="field">
         <span>Title</span>
-        <input v-model="title" class="input" required placeholder="My test post" />
+        <input v-model="title" class="input" required placeholder="Rainy season sale" />
       </label>
       <label class="field">
-        <span>Custom slug <em>(optional)</em></span>
-        <input v-model="slug" class="input" placeholder="my-post" pattern="[A-Za-z0-9_\-]{3,64}" />
+        <span>Page name <em>(optional)</em></span>
+        <input v-model="slug" class="input" placeholder="rainy-sale" pattern="[A-Za-z0-9_\-]{3,64}" autocapitalize="off" />
       </label>
-      <button class="btn primary" :disabled="creating">{{ creating ? 'Creating…' : 'Create' }}</button>
+      <button class="btn primary" :disabled="creating">{{ creating ? 'Creating…' : 'Create post' }}</button>
     </form>
-    <p v-if="error" class="error">{{ error }}</p>
+    <p v-if="error" class="error small">{{ error }}</p>
   </section>
 
-  <section>
-    <div class="row between">
-      <h2 class="section-title">Your posts</h2>
-      <NuxtLink to="/test-kit" class="small">Need sample posts? → Test kit</NuxtLink>
-    </div>
-    <p v-if="loading" class="muted">Loading…</p>
-    <p v-else-if="!posts.length && !error" class="muted">No posts on this device yet. Create one, or <NuxtLink to="/test-kit">load samples / restore what you published</NuxtLink>.</p>
-    <div class="grid">
-      <NuxtLink v-for="p in posts" :key="p.slug" :to="`/posts/${p.slug}`" class="link-card">
-        <TelegramPreview
-          compact :url="postUrl(p.slug)" :site-name="p.siteName" :title="p.title"
-          :description="p.excerpt" :image="p.cover" :image-style="p.imageStyle"
-        />
-        <div class="link-card-foot">
-          <code>/p/{{ p.slug }}</code>
-          <span :class="`pub pub-${publishLabel(p).kind}`">{{ publishLabel(p).text }}</span>
-        </div>
-      </NuxtLink>
-    </div>
-  </section>
+  <h2 class="section-title">On this device <span v-if="posts.length" class="muted small">({{ posts.length }})</span></h2>
+  <p v-if="loading" class="muted">Loading…</p>
+  <div v-else-if="!posts.length && !error" class="empty">
+    No posts here yet. Create one above, or <NuxtLink to="/test-kit">load the sample posts</NuxtLink>.
+  </div>
+  <div class="rows">
+    <ItemRow
+      v-for="p in posts" :key="p.slug" :to="`/posts/${p.slug}`"
+      :image="p.cover" :title="p.title" :sub="p.excerpt"
+      :path="`/p/${p.slug}`" :status="publishLabel(p)"
+    />
+  </div>
 </template>

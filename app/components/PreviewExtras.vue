@@ -111,6 +111,6 @@ const count = computed(() => Object.values(model.value || {}).filter((v) => v !=
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
 .grid3 { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0 10px; }
 .grid4 { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 0 10px; }
-.subhead { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 4px 0 8px; }
+.subhead { font-size: 14px; font-weight: 650; color: var(--ink); margin: 10px 0 8px; padding-top: 10px; border-top: 1px solid var(--rule); }
 @media (max-width: 560px) { .grid2, .grid4 { grid-template-columns: 1fr 1fr; } }
 </style>

@@ -31,42 +31,39 @@ onMounted(load)
 </script>
 
 <template>
+  <div class="page-head">
+    <div>
+      <h1>Links</h1>
+      <p>Short links on your site. Apps show the preview you set here, and people who tap them go to the target page.</p>
+    </div>
+  </div>
+
   <section class="card">
-    <h1>New share link</h1>
-    <p class="muted">
-      You get a short link on this site. People who open it go to your target page. Telegram gets the preview you set here.
-    </p>
     <form class="create" @submit.prevent="create">
-      <label class="field grow">
-        <span>Target URL</span>
-        <input v-model="targetUrl" class="input" type="url" required placeholder="https://example.com/article" />
+      <label class="field">
+        <span>Page to link to</span>
+        <input v-model="targetUrl" class="input" type="url" inputmode="url" required placeholder="https://example.com/article" />
       </label>
       <label class="field">
-        <span>Custom slug <em>(optional)</em></span>
-        <input v-model="slug" class="input" placeholder="summer-sale" pattern="[A-Za-z0-9_\-]{3,64}" />
+        <span>Link name <em>(optional)</em></span>
+        <input v-model="slug" class="input" placeholder="summer-sale" pattern="[A-Za-z0-9_\-]{3,64}" autocapitalize="off" />
       </label>
-      <button class="btn primary" :disabled="creating">{{ creating ? 'Creating…' : 'Create' }}</button>
+      <button class="btn primary" :disabled="creating">{{ creating ? 'Creating…' : 'Create link' }}</button>
     </form>
-    <label class="check"><input v-model="importMeta" type="checkbox" /> Copy current title, description and image from the target page</label>
-    <p v-if="error" class="error">{{ error }}</p>
+    <label class="check"><input v-model="importMeta" type="checkbox" /> Start from the page's current title, description and image</label>
+    <p v-if="error" class="error small">{{ error }}</p>
   </section>
 
-  <section>
-    <h2 class="section-title">Your links</h2>
-    <p v-if="loading" class="muted">Loading…</p>
-    <p v-else-if="!links.length && !error" class="muted">No links on this device yet. Create one, or <NuxtLink to="/test-kit">restore what you published</NuxtLink>.</p>
-    <div class="grid">
-      <NuxtLink v-for="l in links" :key="l.slug" :to="`/links/${l.slug}`" class="link-card">
-        <TelegramPreview
-          compact
-          :url="shareUrl(l)" :site-name="l.siteName" :title="l.title"
-          :description="l.description" :image="l.image" :image-style="l.imageStyle"
-        />
-        <div class="link-card-foot">
-          <code>/s/{{ l.slug }}</code>
-          <span :class="`pub pub-${publishLabel(l).kind}`">{{ publishLabel(l).text }}</span>
-        </div>
-      </NuxtLink>
-    </div>
-  </section>
+  <h2 class="section-title">On this device <span v-if="links.length" class="muted small">({{ links.length }})</span></h2>
+  <p v-if="loading" class="muted">Loading…</p>
+  <div v-else-if="!links.length && !error" class="empty">
+    No links here yet. Create one above, <NuxtLink to="/test-kit">load the samples</NuxtLink>, or restore what you published from another device.
+  </div>
+  <div class="rows">
+    <ItemRow
+      v-for="l in links" :key="l.slug" :to="`/links/${l.slug}`"
+      :image="l.platforms?.telegram?.image || l.image" :title="l.title" :sub="l.targetUrl.replace(/^https?:\/\//, '')"
+      :path="`/s/${l.slug}`" :status="publishLabel(l)"
+    />
+  </div>
 </template>

@@ -97,7 +97,7 @@ defineExpose({ updateAll, count: computed(() => sent.value.length) })
 <template>
   <div class="send">
     <h2>Message &amp; preview options</h2>
-    <p class="muted small">These options shape the message the preview appears in. The mock above shows exactly what will be sent.</p>
+    <p class="muted small">These options shape the message the preview appears in. The preview shows exactly what will be sent.</p>
 
     <label class="field">
       <span>Message text <em>use {link}, {title}, {description}</em></span>
@@ -198,7 +198,7 @@ defineExpose({ updateAll, count: computed(() => sent.value.length) })
 </template>
 
 <style scoped>
-.send { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 14px; }
+.send { margin-top: 4px; }
 .chips { display: flex; gap: 4px; flex-wrap: wrap; }
 .chip { font: inherit; font-size: 12px; padding: 2px 8px; border: 1px solid var(--line); border-radius: 99px; background: #fff; cursor: pointer; }
 .optgrid { display: flex; gap: 14px; flex-wrap: wrap; }

@@ -10,6 +10,9 @@ const api = useApi()
 const slug = String(route.params.slug)
 
 const studio = useStudio()
+/** Phones/tablets show one part at a time */
+const mview = ref<'edit' | 'preview' | 'share'>('edit')
+const panel = ref<'send' | 'update' | 'check'>('send')
 const link = ref<LocalLink | null>(null)
 const restoring = ref(false)
 const draft = reactive({ targetUrl: '', siteName: '', title: '', description: '', image: '', imageStyle: 'large' as 'large' | 'small', extra: {} as PreviewExtra, platforms: {} as PlatformOverrides })
@@ -220,109 +223,114 @@ const imageWarning = computed(() => {
 <template>
   <div v-if="!link && !error" class="muted">Loading…</div>
   <div v-else-if="!link" class="card">
-    <p class="error">{{ error }}</p>
-    <p class="muted small">Links are kept in the browser you made them in. If you published it from another device, restore it from GitHub.</p>
-    <div class="row"><button class="btn primary" :disabled="restoring" @click="restore">{{ restoring ? 'Restoring…' : 'Restore from GitHub' }}</button><NuxtLink to="/">← Back</NuxtLink></div>
+    <h1>Link not on this device</h1>
+    <p class="muted">{{ error }} Links are kept in the browser you made them in. If you published it from another device, restore it from GitHub.</p>
+    <div class="row wrap"><button class="btn primary" :disabled="restoring" @click="restore">{{ restoring ? 'Restoring…' : 'Restore from GitHub' }}</button><NuxtLink class="btn ghost" to="/">Back to links</NuxtLink></div>
   </div>
 
-  <div v-else class="editor">
-    <!-- LEFT: form -->
-    <section class="card">
-      <div class="row between">
-        <h1>Edit <code>/s/{{ link.slug }}</code></h1>
-        <span :class="`pub pub-${pub.kind}`" :title="link.publishError">{{ pub.text }}<button v-if="pub.kind === 'error' || pub.kind === 'warn'" class="linkbtn small" @click="retryPublish"> · retry</button></span>
-      </div>
-
-      <label class="field">
-        <span>Target URL <em>(where people land)</em></span>
-        <div class="row">
-          <input v-model="draft.targetUrl" class="input grow" type="url" />
-          <button class="btn ghost" :disabled="importing || syncDraft" @click="importFromTarget">{{ importing ? 'Importing…' : 'Import meta' }}</button>
+  <div v-else class="editor" :class="`show-${mview}`">
+    <header class="ed-head">
+      <div class="grow">
+        <NuxtLink to="/" class="ed-back">‹ Links</NuxtLink>
+        <h1>{{ draft.title || link.slug }}</h1>
+        <div class="ed-share">
+          <code>{{ baseShare.replace(/^https?:\/\//, '') }}</code>
+          <button class="btn sm ghost" @click="copy(currentShare, 'v')">{{ copied === 'v' ? 'Copied' : 'Copy link' }}</button>
+          <span :class="`pub pub-${pub.kind}`" :title="link.publishError">{{ pub.text }}</span>
         </div>
-      </label>
-
-      <p class="whatis small">
-        <b>{{ baseShare.replace(/^https?:\/\//, '') }}</b> is your <b>share link</b>. Apps show the preview below,
-        and people who tap it are taken to <span class="target">{{ draft.targetUrl.replace(/^https?:\/\//, '') }}</span>.
-      </p>
-      <div v-if="link.publishError" class="puberr small">
-        <b>Not published:</b> {{ link.publishError }}
-        <button class="btn sm" @click="retryPublish">Retry</button>
       </div>
+      <button class="btn sm ghost danger" @click="remove">Delete</button>
+    </header>
 
-      <div v-if="link.postSlug" class="syncbox">
-        <label class="check"><input v-model="syncDraft" type="checkbox" /> Keep in sync with post <NuxtLink :to="`/posts/${link.postSlug}`"><code>/p/{{ link.postSlug }}</code></NuxtLink></label>
-        <p v-if="syncDraft" class="muted small">This link copies the post's title, summary and image. Edit the post, and this link updates automatically. Untick to give the link its own preview.</p>
+    <div class="ed-switch">
+      <div class="seg" role="tablist">
+        <button :class="{ on: mview === 'edit' }" @click="mview = 'edit'">Edit</button>
+        <button :class="{ on: mview === 'preview' }" @click="mview = 'preview'">Preview<span v-if="dirty"> •</span></button>
+        <button :class="{ on: mview === 'share' }" @click="mview = 'share'">Share</button>
+      </div>
+    </div>
+
+    <!-- FORM -->
+    <section class="ed-form">
+      <div class="group">
+        <h3>Where it goes</h3>
+        <label class="field">
+          <span>Page people land on</span>
+          <div class="row">
+            <input v-model="draft.targetUrl" class="input grow" type="url" inputmode="url" />
+            <button class="btn ghost" :disabled="importing || syncDraft" title="Copy title, description and image from that page" @click="importFromTarget">{{ importing ? 'Importing…' : 'Import' }}</button>
+          </div>
+        </label>
+        <div v-if="link.publishError" class="puberr small">
+          <span class="grow"><b>Not published.</b> {{ link.publishError }}</span>
+          <button class="btn sm" @click="retryPublish">Retry</button>
+        </div>
+        <div v-if="link.postSlug" class="syncbox">
+          <label class="check"><input v-model="syncDraft" type="checkbox" /> <span>Use the preview of post <NuxtLink :to="`/posts/${link.postSlug}`">{{ link.postSlug }}</NuxtLink></span></label>
+          <p v-if="syncDraft" class="muted small">Edit the post to change this link's preview. Untick to give the link its own.</p>
+        </div>
       </div>
 
       <fieldset class="plain" :disabled="syncDraft">
-      <label class="field">
-        <span>Site name <em class="count">{{ draft.siteName.length }}</em></span>
-        <input v-model="draft.siteName" class="input" placeholder="My Shop" />
-      </label>
-
-      <label class="field">
-        <span>Title <em class="count" :class="{ over: draft.title.length > 90 }">{{ draft.title.length }}</em></span>
-        <input v-model="draft.title" class="input" placeholder="Headline shown in bold" />
-      </label>
-
-      <label class="field">
-        <span>Description <em class="count" :class="{ over: draft.description.length > 300 }">{{ draft.description.length }}</em></span>
-        <textarea v-model="draft.description" class="input" rows="4" placeholder="A sentence or two" />
-      </label>
-
-      <div class="field">
-        <span>Image URL</span>
-        <div class="row">
-          <input v-model="draft.image" class="input grow" type="url" placeholder="https://…/cover-1200x630.jpg" />
-          <TestImagePicker @pick="draft.image = $event" />
+        <div class="group">
+          <h3>What apps show</h3>
+          <label class="field">
+            <span>Site name <em class="count">{{ draft.siteName.length }}</em></span>
+            <input v-model="draft.siteName" class="input" placeholder="My Shop" />
+          </label>
+          <label class="field">
+            <span>Title <em class="count" :class="{ over: draft.title.length > 90 }">{{ draft.title.length }}</em></span>
+            <input v-model="draft.title" class="input" placeholder="Headline shown in bold" />
+          </label>
+          <label class="field">
+            <span>Description <em class="count" :class="{ over: draft.description.length > 300 }">{{ draft.description.length }}</em></span>
+            <textarea v-model="draft.description" class="input" rows="3" placeholder="A sentence or two" />
+          </label>
         </div>
-        <ImageUpload @uploaded="draft.image = $event" />
-        <small v-if="imageWarning && imageInfo?.error" class="hint warn">{{ imageWarning }}</small>
-        <ImageCheck :url="draft.image" />
-      </div>
 
-      <div class="field">
-        <span>Image style</span>
-        <div class="seg">
-          <button :class="{ on: draft.imageStyle === 'large' }" @click="draft.imageStyle = 'large'">Large image</button>
-          <button :class="{ on: draft.imageStyle === 'small' }" @click="draft.imageStyle = 'small'">Small thumbnail</button>
+        <div class="group">
+          <h3>Image</h3>
+          <div class="field">
+            <div class="row">
+              <input v-model="draft.image" class="input grow" type="url" inputmode="url" placeholder="https://…/cover-1200x630.jpg" aria-label="Image URL" />
+              <TestImagePicker @pick="draft.image = $event" />
+            </div>
+            <ImageUpload @uploaded="draft.image = $event" />
+            <small v-if="imageWarning && imageInfo?.error" class="hint warn">{{ imageWarning }}</small>
+            <ImageCheck :url="draft.image" />
+          </div>
+          <div class="field">
+            <span>Image size in the preview</span>
+            <div class="seg">
+              <button :class="{ on: draft.imageStyle === 'large' }" @click="draft.imageStyle = 'large'">Large</button>
+              <button :class="{ on: draft.imageStyle === 'small' }" @click="draft.imageStyle = 'small'">Small thumbnail</button>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <PlatformOverridesForm
-        v-model="draft.platforms" v-model:tab="overrideTab"
-        :base="{ siteName: draft.siteName, title: draft.title, description: draft.description, image: draft.image }"
-      />
-      <PreviewExtras v-model="draft.extra" :image-size="imageInfo && !imageInfo.error ? imageInfo : null" />
+        <div class="group">
+          <PlatformOverridesForm
+            v-model="draft.platforms" v-model:tab="overrideTab"
+            :base="{ siteName: draft.siteName, title: draft.title, description: draft.description, image: draft.image }"
+          />
+          <PreviewExtras v-model="draft.extra" :image-size="imageInfo && !imageInfo.error ? imageInfo : null" />
+        </div>
       </fieldset>
-
-      <div class="row actions">
-        <button class="btn primary" :disabled="!dirty || saving" @click="save">{{ saving ? 'Publishing…' : dirty ? 'Save & publish' : 'Saved' }}</button>
-        <button class="btn ghost" :disabled="!dirty" @click="fill(link)">Discard</button>
-        <span class="grow" />
-        <button class="btn danger ghost" @click="remove">Delete</button>
-      </div>
-      <label v-if="tgReady || tgBot || fbReady" class="check"><input v-model="autoRefresh" type="checkbox" /> Update apps automatically after saving (refresh Telegram &amp; Facebook, edit sent messages)</label>
-      <p v-if="notice2 && dirty" class="notice">{{ notice2 }}</p>
-      <p v-if="notice" class="notice">{{ notice }}</p>
-      <p v-if="error" class="error">{{ error }}</p>
     </section>
 
-    <!-- RIGHT: preview + publish -->
-    <section class="side">
-      <div class="card">
-        <div class="row between">
-          <h2>Preview <span v-if="dirty" class="pill warn">unsaved</span></h2>
-          <div class="seg sm">
+    <!-- PREVIEW + PANELS -->
+    <aside class="ed-side">
+      <div class="stage">
+        <div class="stage-top">
+          <div class="seg sm apptabs" role="tablist" aria-label="App">
+            <button v-for="a in PREVIEW_APPS" :key="a.id" :class="{ on: app === a.id }" @click="app = a.id">
+              {{ a.label }}<span v-if="draft.platforms[overrideKey(a.id)]" title="Has its own text or image"> •</span>
+            </button>
+          </div>
+          <div class="seg sm" aria-label="Theme">
             <button :class="{ on: theme === 'light' }" @click="theme = 'light'">Light</button>
             <button :class="{ on: theme === 'dark' }" @click="theme = 'dark'">Dark</button>
           </div>
-        </div>
-        <div class="seg sm apptabs">
-          <button v-for="a in PREVIEW_APPS" :key="a.id" :class="{ on: app === a.id }" @click="app = a.id">
-            {{ a.label }}<span v-if="draft.platforms[overrideKey(a.id)]" title="Has its own text or image"> •</span>
-          </button>
         </div>
         <TelegramPreview
           v-show="app === 'telegram'"
@@ -336,102 +344,122 @@ const imageWarning = computed(() => {
         <FacebookPreview v-if="app === 'facebook'" :theme="theme" :url="currentShare" :title="view.title" :description="view.description" :image="view.image" :text="mockPlain.replace(currentShare, '').trim()" />
         <MessengerPreview v-if="app === 'messenger'" :theme="theme" :url="currentShare" :title="view.title" :description="view.description" :image="view.image" :text="mockPlain" />
         <WhatsAppPreview v-if="app === 'whatsapp'" :theme="theme" :url="currentShare" :title="view.title" :description="view.description" :image="view.image" :text="mockPlain" :image-bytes="waImageBytes" />
-        <p class="muted small">A close copy of each app's layout. The apps make the final choice, for example showing a large image as a small thumbnail.</p>
-        <TelegramSend
-          v-show="app === 'telegram'"
-          ref="sender" v-model:options="sendOpts" v-model:template="sendTemplate"
-          :owner="`link:${link.slug}`" :latest-url="currentShare" :account="tgReady" :bot="tgBot" :dirty="dirty" :title="draft.title" :description="draft.description"
-        />
+        <p class="stage-note">A close copy of the app's layout<span v-if="dirty">, showing your unsaved changes</span>. The app makes the final call, such as shrinking an image to a thumbnail.</p>
       </div>
 
-      <div v-show="app === 'facebook' || app === 'messenger'" class="card">
-        <FacebookPanel
-          ref="fbPanel" :primary-url="currentShare" :urls="refreshUrls" :owner="`link:${link.slug}`" :template="sendTemplate"
-          :dirty="dirty" :connected="fbReady" :page-connected="fbPage" :app-id="fbAppId" :theme="theme" :title="draft.title" :description="draft.description"
-        />
-      </div>
-
-      <div v-show="app === 'whatsapp'" class="card">
-        <WhatsAppPanel
-          :primary-url="currentShare" :image="view.image" :text="mockPlain" :has-override-image="!!draft.platforms.whatsapp?.image" :locked-to="syncDraft ? link.postSlug : undefined"
-          @use-image="useWhatsAppImage" @image-bytes="waImageBytes = $event"
-        />
-      </div>
-
-      <div v-show="app === 'telegram'" class="card">
-        <h2>Update in Telegram</h2>
-        <p class="muted small">Telegram saves a link's preview the first time anyone posts it. Saving here changes what your server sends, but Telegram keeps the old preview until you do one of these:</p>
-
-        <div class="step">
-          <b>A. Post the new versioned link</b> <span class="muted small">(works right away)</span>
-          <div class="copyrow">
-            <code>{{ currentShare }}</code>
-            <button class="btn sm" @click="copy(currentShare, 'v')">{{ copied === 'v' ? 'Copied ✓' : 'Copy' }}</button>
-            <a class="btn sm ghost" :href="tgShare" target="_blank">Share to Telegram</a>
-          </div>
-          <p class="muted small">Every saved change adds a new <code>?v=</code> number. Telegram sees it as a new link and reads the preview again.</p>
+      <div class="panels">
+        <div class="panel-tabs" role="tablist">
+          <button :class="{ on: panel === 'send' }" @click="panel = 'send'">Message</button>
+          <button :class="{ on: panel === 'update' }" @click="panel = 'update'">Update apps</button>
+          <button :class="{ on: panel === 'check' }" @click="panel = 'check'">Check</button>
         </div>
 
-        <div class="step">
-          <b>B. Refresh a link you already posted</b>
-          <template v-if="tgReady">
-            <p class="muted small">Sends your links to Telegram's official @WebpageBot, then checks that Telegram shows what you saved. If it doesn't, the tool presses "Update with content" and checks again.</p>
-            <div class="copyrow">
-              <button class="btn sm primary" :disabled="!!tgBusy || dirty" @click="refreshTelegram">
-                {{ tgBusy === 'refresh' ? 'Updating…' : 'Refresh in Telegram' }}
-              </button>
-              <button class="btn sm ghost" :disabled="!!tgBusy" @click="loadCached">
-                {{ tgBusy === 'cached' ? 'Loading…' : "Show Telegram's saved preview" }}
-              </button>
-            </div>
-            <label class="check"><input v-model="withContent" type="checkbox" /> Also press "Update with content" (use this if the image or description stays old)</label>
-            <p v-if="dirty" class="muted small">Save your changes first.</p>
-            <p v-if="tgError" class="error small">{{ tgError }}</p>
-
-            <TelegramSync ref="sync" :theme="theme" />
-
-            <div v-if="tgCached" class="tgresult">
-              <div class="small muted">Saved in Telegram right now for <code>{{ baseShare }}</code></div>
-              <TgRealPreview :preview="tgCached" :url="baseShare" :theme="theme" />
-            </div>
-          </template>
-          <template v-else>
-            <ol class="small">
-              <li>Open <a href="https://t.me/WebpageBot" target="_blank">@WebpageBot</a> and press Start.</li>
-              <li>Send it the exact link you posted, for example
-                <button class="linkbtn" @click="copy(baseShare, 'b')">{{ copied === 'b' ? 'copied ✓' : baseShare }}</button>
-              </li>
-              <li>If it still looks old, tap <i>Update with content</i>.</li>
-            </ol>
-            <p class="muted small">💡 Connect a Telegram account (see README → "Connect Telegram") to do this from here with one click.</p>
-          </template>
+        <div v-show="panel === 'send'" class="panel-body">
+          <TelegramSend
+            ref="sender" v-model:options="sendOpts" v-model:template="sendTemplate"
+            :owner="`link:${link.slug}`" :latest-url="currentShare" :account="tgReady" :bot="tgBot" :dirty="dirty" :title="draft.title" :description="draft.description"
+          />
         </div>
 
-        <div class="step">
-          <div class="row between">
-            <b>Check what Telegram's crawler sees</b>
-            <button class="btn sm" :disabled="checking" @click="checkTelegram">{{ checking ? 'Checking…' : 'Check live' }}</button>
+        <div v-show="panel === 'update'" class="panel-body">
+          <label v-if="tgReady || tgBot || fbReady" class="check" style="margin:0 0 12px"><input v-model="autoRefresh" type="checkbox" /> <span>Update apps automatically each time I publish</span></label>
+          <div class="seg sm" style="margin-bottom:12px">
+            <button v-for="a in PREVIEW_APPS" :key="a.id" :class="{ on: app === a.id }" @click="app = a.id">{{ a.label }}</button>
           </div>
-          <template v-if="seen">
-            <p class="small" :class="seen.ok ? 'ok' : 'error'">
-              HTTP {{ seen.status || '—' }} · {{ seen.ms }} ms<span v-if="seen.error"> · {{ seen.error }}</span>
-            </p>
-            <TelegramPreview
-              compact :theme="theme" :url="currentShare"
-              :site-name="seen.resolved.siteName" :title="seen.resolved.title"
-              :description="seen.resolved.description" :image="seen.resolved.image"
-              :image-style="seen.tags['twitter:card'] === 'summary' ? 'small' : 'large'"
+
+          <div v-show="app === 'facebook' || app === 'messenger'">
+            <FacebookPanel
+              ref="fbPanel" :primary-url="currentShare" :urls="refreshUrls" :owner="`link:${link.slug}`" :template="sendTemplate"
+              :dirty="dirty" :connected="fbReady" :page-connected="fbPage" :app-id="fbAppId" :theme="theme" :title="draft.title" :description="draft.description"
             />
-            <button class="linkbtn small" @click="showTags = !showTags">{{ showTags ? 'Hide' : 'Show' }} raw meta tags</button>
-            <table v-if="showTags" class="tags">
-              <tr v-for="(v, k) in seen.tags" :key="k"><td>{{ k }}</td><td>{{ v }}</td></tr>
-            </table>
-          </template>
+          </div>
+
+          <div v-show="app === 'whatsapp'">
+            <WhatsAppPanel
+              :primary-url="currentShare" :image="view.image" :text="mockPlain" :has-override-image="!!draft.platforms.whatsapp?.image" :locked-to="syncDraft ? link.postSlug : undefined"
+              @use-image="useWhatsAppImage" @image-bytes="waImageBytes = $event"
+            />
+          </div>
+
+          <div v-show="app === 'telegram'">
+            <h2>Update in Telegram</h2>
+            <p class="muted small">Telegram keeps the preview it saw first. After you publish a change, do one of these.</p>
+
+            <div class="step">
+              <h3>Share the newest link</h3>
+              <div class="copyrow">
+                <code>{{ currentShare }}</code>
+                <button class="btn sm" @click="copy(currentShare, 'v')">{{ copied === 'v' ? 'Copied' : 'Copy' }}</button>
+                <a class="btn sm ghost" :href="tgShare" target="_blank" rel="noopener">Open Telegram</a>
+              </div>
+              <p class="muted small">Each publish adds a new <code>?v=</code> number, so Telegram treats it as a new link and reads the latest preview.</p>
+            </div>
+
+            <div class="step">
+              <h3>Refresh a link you already posted</h3>
+              <template v-if="tgReady">
+                <p class="muted small">Sends your link to Telegram's @WebpageBot, then checks that Telegram shows what you published, pressing "Update with content" if needed.</p>
+                <div class="copyrow">
+                  <button class="btn sm primary" :disabled="!!tgBusy || dirty" @click="refreshTelegram">{{ tgBusy === 'refresh' ? 'Updating…' : 'Refresh in Telegram' }}</button>
+                  <button class="btn sm ghost" :disabled="!!tgBusy" @click="loadCached">{{ tgBusy === 'cached' ? 'Loading…' : "Show Telegram's copy" }}</button>
+                </div>
+                <label class="check"><input v-model="withContent" type="checkbox" /> <span>Also press "Update with content" (if the image or description stays old)</span></label>
+                <p v-if="dirty" class="muted small">Publish your changes first.</p>
+                <p v-if="tgError" class="error small">{{ tgError }}</p>
+                <TelegramSync ref="sync" :theme="theme" />
+                <div v-if="tgCached" class="tgresult">
+                  <div class="small muted">Telegram's saved copy of <code>{{ baseShare }}</code></div>
+                  <TgRealPreview :preview="tgCached" :url="baseShare" :theme="theme" />
+                </div>
+              </template>
+              <template v-else>
+                <ol class="small">
+                  <li>Open <a href="https://t.me/WebpageBot" target="_blank" rel="noopener">@WebpageBot</a> and press Start.</li>
+                  <li>Send it the link you posted: <button class="linkbtn" @click="copy(baseShare, 'b')">{{ copied === 'b' ? 'copied' : baseShare }}</button></li>
+                  <li>If it still looks old, tap <i>Update with content</i>.</li>
+                </ol>
+                <p class="muted small">Connect a Telegram account (see the README) to do this here with one tap.</p>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <div v-show="panel === 'check'" class="panel-body">
+          <AppsCheck :url="currentShare" />
+          <div class="step">
+            <div class="row between">
+              <h3>What Telegram's crawler reads</h3>
+              <button class="btn sm" :disabled="checking" @click="checkTelegram">{{ checking ? 'Checking…' : 'Check' }}</button>
+            </div>
+            <template v-if="seen">
+              <p class="small" :class="seen.ok ? 'ok' : 'error'">HTTP {{ seen.status || '—' }}, {{ seen.ms }} ms<span v-if="seen.error">: {{ seen.error }}</span></p>
+              <TelegramPreview
+                compact :theme="theme" :url="currentShare"
+                :site-name="seen.resolved.siteName" :title="seen.resolved.title"
+                :description="seen.resolved.description" :image="seen.resolved.image"
+                :image-style="seen.tags['twitter:card'] === 'summary' ? 'small' : 'large'"
+              />
+              <button class="linkbtn small" @click="showTags = !showTags">{{ showTags ? 'Hide' : 'Show' }} the raw tags</button>
+              <table v-if="showTags" class="tags">
+                <tr v-for="(v, k) in seen.tags" :key="k"><td>{{ k }}</td><td>{{ v }}</td></tr>
+              </table>
+            </template>
+          </div>
         </div>
       </div>
-      <div class="card">
-        <AppsCheck :url="currentShare" />
+    </aside>
+
+    <!-- SAVE BAR -->
+    <div class="savebar" :class="{ idle: !dirty && !saving && !notice && !error }">
+      <div class="msg" aria-live="polite">
+        <span v-if="error" class="error">{{ error }}</span>
+        <span v-else-if="notice">{{ notice }}</span>
+        <span v-else-if="notice2 && dirty">{{ notice2 }}</span>
+        <span v-else-if="dirty" class="quiet">Unpublished changes</span>
+        <span v-else class="quiet">Everything is published.</span>
       </div>
-    </section>
+      <button class="btn ghost" :disabled="!dirty || saving" @click="fill(link)">Discard</button>
+      <button class="btn primary" :disabled="!dirty || saving" @click="save">{{ saving ? 'Publishing…' : 'Publish' }}</button>
+    </div>
   </div>
 </template>

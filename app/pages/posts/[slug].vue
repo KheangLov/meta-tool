@@ -4,6 +4,8 @@ const api = useApi()
 const slug = String(route.params.slug)
 
 const studio = useStudio()
+const mview = ref<'edit' | 'preview' | 'share'>('edit')
+const panel = ref<'send' | 'update' | 'check'>('send')
 const post = ref<LocalPost | null>(null)
 const restoring = ref(false)
 const draft = reactive({ siteName: '', title: '', excerpt: '', body: '', cover: '', imageStyle: 'large' as 'large' | 'small', author: '', extra: {} as PreviewExtra, platforms: {} as PlatformOverrides })
@@ -165,94 +167,110 @@ async function remove() {
 <template>
   <div v-if="!post && !error" class="muted">Loading…</div>
   <div v-else-if="!post" class="card">
-    <p class="error">{{ error }}</p>
-    <p class="muted small">Posts are kept in the browser you made them in. If you published it from another device, restore it from GitHub.</p>
-    <div class="row"><button class="btn primary" :disabled="restoring" @click="restore">{{ restoring ? 'Restoring…' : 'Restore from GitHub' }}</button><NuxtLink to="/posts">← Back</NuxtLink></div>
+    <h1>Post not on this device</h1>
+    <p class="muted">{{ error }} Posts are kept in the browser you made them in. If you published it from another device, restore it from GitHub.</p>
+    <div class="row wrap"><button class="btn primary" :disabled="restoring" @click="restore">{{ restoring ? 'Restoring…' : 'Restore from GitHub' }}</button><NuxtLink class="btn ghost" to="/posts">Back to posts</NuxtLink></div>
   </div>
 
-  <div v-else class="editor">
-    <section class="card">
-      <div class="row between">
-        <h1>Edit post <code>/p/{{ post.slug }}</code> <span :class="`pub pub-${pub.kind}`" :title="post.publishError">{{ pub.text }}<button v-if="pub.kind === 'error' || pub.kind === 'warn'" class="linkbtn small" @click="retryPublish"> · retry</button></span></h1>
-        <a class="btn sm ghost" :href="url" target="_blank">Open ↗</a>
-      </div>
-
-      <p class="whatis small">
-        <b>{{ url.replace(/^https?:\/\//, '') }}</b> is this post's own page. Share it as it is, or make a short share link for it on the right.
-      </p>
-      <div v-if="post.publishError" class="puberr small">
-        <b>Not published:</b> {{ post.publishError }}
-        <button class="btn sm" @click="retryPublish">Retry</button>
-      </div>
-
-      <label class="field">
-        <span>Site name</span>
-        <input v-model="draft.siteName" class="input" />
-      </label>
-      <label class="field">
-        <span>Title <em class="count">{{ draft.title.length }}</em></span>
-        <input v-model="draft.title" class="input" />
-      </label>
-      <label class="field">
-        <span>Summary <em>(shown in the preview)</em> <em class="count">{{ draft.excerpt.length }}</em></span>
-        <textarea v-model="draft.excerpt" class="input" rows="3" />
-      </label>
-      <div class="field">
-        <span>Cover image</span>
-        <div class="row">
-          <input v-model="draft.cover" class="input grow" type="url" placeholder="https://…/cover-1200x630.jpg" />
-          <TestImagePicker @pick="draft.cover = $event" />
-        </div>
-        <ImageUpload @uploaded="draft.cover = $event" />
-        <ImageCheck :url="draft.cover" />
-      </div>
-      <div class="field">
-        <span>Image style</span>
-        <div class="seg">
-          <button :class="{ on: draft.imageStyle === 'large' }" @click="draft.imageStyle = 'large'">Large image</button>
-          <button :class="{ on: draft.imageStyle === 'small' }" @click="draft.imageStyle = 'small'">Small thumbnail</button>
+  <div v-else class="editor" :class="`show-${mview}`">
+    <header class="ed-head">
+      <div class="grow">
+        <NuxtLink to="/posts" class="ed-back">‹ Posts</NuxtLink>
+        <h1>{{ draft.title || post.slug }}</h1>
+        <div class="ed-share">
+          <code>{{ url.replace(/^https?:\/\//, '') }}</code>
+          <button class="btn sm ghost" @click="copyUrl">{{ copied ? 'Copied' : 'Copy link' }}</button>
+          <a class="btn sm ghost" :href="url" target="_blank" rel="noopener">Open page</a>
+          <span :class="`pub pub-${pub.kind}`" :title="post.publishError">{{ pub.text }}</span>
         </div>
       </div>
-      <label class="field">
-        <span>Author</span>
-        <input v-model="draft.author" class="input" />
-      </label>
-      <PlatformOverridesForm
-        v-model="draft.platforms" v-model:tab="overrideTab"
-        :base="{ siteName: draft.siteName, title: draft.title, description: draft.excerpt, image: draft.cover }"
-      />
-      <PreviewExtras v-model="draft.extra" :image-size="imageInfo && !imageInfo.error ? imageInfo : null" />
+      <button class="btn sm ghost danger" @click="remove">Delete</button>
+    </header>
 
-      <label class="field">
-        <span>Body <em>(blank line = new paragraph)</em></span>
-        <textarea v-model="draft.body" class="input" rows="8" />
-      </label>
-
-      <div class="row actions">
-        <button class="btn primary" :disabled="!dirty || saving" @click="save">{{ saving ? 'Publishing…' : dirty ? 'Save & publish' : 'Saved' }}</button>
-        <button class="btn ghost" :disabled="!dirty" @click="fill(post)">Discard</button>
-        <span class="grow" />
-        <button class="btn danger ghost" @click="remove">Delete</button>
+    <div class="ed-switch">
+      <div class="seg" role="tablist">
+        <button :class="{ on: mview === 'edit' }" @click="mview = 'edit'">Edit</button>
+        <button :class="{ on: mview === 'preview' }" @click="mview = 'preview'">Preview<span v-if="dirty"> •</span></button>
+        <button :class="{ on: mview === 'share' }" @click="mview = 'share'">Share</button>
       </div>
-      <label v-if="tgReady || tgBot || fbReady" class="check"><input v-model="autoRefresh" type="checkbox" /> Update apps automatically after saving (refresh Telegram &amp; Facebook, edit sent messages)</label>
-      <p v-if="notice2 && dirty" class="notice">{{ notice2 }}</p>
-      <p v-if="notice" class="notice">{{ notice }}</p>
-      <p v-if="error" class="error">{{ error }}</p>
+    </div>
+
+    <section class="ed-form">
+      <div v-if="post.publishError" class="group">
+        <div class="puberr small" style="margin:0">
+          <span class="grow"><b>Not published.</b> {{ post.publishError }}</span>
+          <button class="btn sm" @click="retryPublish">Retry</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3>What apps show</h3>
+        <label class="field">
+          <span>Site name</span>
+          <input v-model="draft.siteName" class="input" />
+        </label>
+        <label class="field">
+          <span>Title <em class="count">{{ draft.title.length }}</em></span>
+          <input v-model="draft.title" class="input" />
+        </label>
+        <label class="field">
+          <span>Summary <em class="count">{{ draft.excerpt.length }}</em></span>
+          <textarea v-model="draft.excerpt" class="input" rows="3" placeholder="One or two sentences shown under the title" />
+        </label>
+      </div>
+
+      <div class="group">
+        <h3>Cover image</h3>
+        <div class="field">
+          <div class="row">
+            <input v-model="draft.cover" class="input grow" type="url" inputmode="url" placeholder="https://…/cover-1200x630.jpg" aria-label="Cover image URL" />
+            <TestImagePicker @pick="draft.cover = $event" />
+          </div>
+          <ImageUpload @uploaded="draft.cover = $event" />
+          <ImageCheck :url="draft.cover" />
+        </div>
+        <div class="field">
+          <span>Image size in the preview</span>
+          <div class="seg">
+            <button :class="{ on: draft.imageStyle === 'large' }" @click="draft.imageStyle = 'large'">Large</button>
+            <button :class="{ on: draft.imageStyle === 'small' }" @click="draft.imageStyle = 'small'">Small thumbnail</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3>The page</h3>
+        <label class="field">
+          <span>Author</span>
+          <input v-model="draft.author" class="input" />
+        </label>
+        <label class="field">
+          <span>Body <em>(leave a blank line between paragraphs)</em></span>
+          <textarea v-model="draft.body" class="input" rows="8" />
+        </label>
+      </div>
+
+      <div class="group">
+        <PlatformOverridesForm
+          v-model="draft.platforms" v-model:tab="overrideTab"
+          :base="{ siteName: draft.siteName, title: draft.title, description: draft.excerpt, image: draft.cover }"
+        />
+        <PreviewExtras v-model="draft.extra" :image-size="imageInfo && !imageInfo.error ? imageInfo : null" />
+      </div>
     </section>
 
-    <section class="side">
-      <div class="card">
-        <div class="row between">
-          <h2>Preview <span v-if="dirty" class="pill warn">unsaved</span></h2>
-          <div class="seg sm">
+    <aside class="ed-side">
+      <div class="stage">
+        <div class="stage-top">
+          <div class="seg sm apptabs" role="tablist" aria-label="App">
+            <button v-for="a in PREVIEW_APPS" :key="a.id" :class="{ on: app === a.id }" @click="app = a.id">
+              {{ a.label }}<span v-if="draft.platforms[overrideKey(a.id)]" title="Has its own text or image"> •</span>
+            </button>
+          </div>
+          <div class="seg sm" aria-label="Theme">
             <button :class="{ on: theme === 'light' }" @click="theme = 'light'">Light</button>
             <button :class="{ on: theme === 'dark' }" @click="theme = 'dark'">Dark</button>
           </div>
-        </div>
-        <div class="seg sm apptabs">
-          <button v-for="a in PREVIEW_APPS" :key="a.id" :class="{ on: app === a.id }" @click="app = a.id">
-            {{ a.label }}<span v-if="draft.platforms[overrideKey(a.id)]" title="Has its own text or image"> •</span>
-          </button>
         </div>
         <FacebookPreview v-if="app === 'facebook'" :theme="theme" :url="latestUrl" :title="view.title" :description="view.description" :image="view.image" :text="mockPlain.replace(latestUrl, '').trim()" :page-name="draft.siteName || 'Your Page'" />
         <MessengerPreview v-if="app === 'messenger'" :theme="theme" :url="latestUrl" :title="view.title" :description="view.description" :image="view.image" :text="mockPlain" />
@@ -265,56 +283,83 @@ async function remove() {
           :video="!!draft.extra.videoUrl" :duration="draft.extra.videoDuration" :audio="!!draft.extra.audioUrl"
           @image-info="imageInfo = $event"
         />
-        <TelegramSend
-          v-show="app === 'telegram'"
-          ref="sender" v-model:options="sendOpts" v-model:template="sendTemplate"
-          :owner="`post:${slug}`" :latest-url="latestUrl" :account="tgReady" :bot="tgBot" :dirty="dirty" :title="draft.title" :description="draft.excerpt"
-        />
+        <p class="stage-note">A close copy of the app's layout<span v-if="dirty">, showing your unsaved changes</span>. The app makes the final call, such as shrinking an image to a thumbnail.</p>
       </div>
 
-      <div v-show="app === 'facebook' || app === 'messenger'" class="card">
-        <FacebookPanel
-          ref="fbPanel" :primary-url="latestUrl" :urls="affectedUrls" :owner="`post:${slug}`" :template="sendTemplate"
-          :dirty="dirty" :connected="fbReady" :page-connected="fbPage" :app-id="fbAppId" :theme="theme" :title="draft.title" :description="draft.excerpt"
-        />
-      </div>
-
-      <div v-show="app === 'whatsapp'" class="card">
-        <WhatsAppPanel
-          :primary-url="latestUrl" :image="view.image" :text="mockPlain" :has-override-image="!!draft.platforms.whatsapp?.image"
-          @use-image="useWhatsAppImage" @image-bytes="waImageBytes = $event"
-        />
-      </div>
-
-      <div class="card">
-        <h2>Share this post</h2>
-        <div class="copyrow">
-          <code>{{ url }}</code>
-          <button class="btn sm" @click="copyUrl">{{ copied ? 'Copied ✓' : 'Copy' }}</button>
-          <a class="btn sm ghost" :href="`https://t.me/share/url?url=${encodeURIComponent(url)}`" target="_blank">Share to Telegram</a>
+      <div class="panels">
+        <div class="panel-tabs" role="tablist">
+          <button :class="{ on: panel === 'send' }" @click="panel = 'send'">Message</button>
+          <button :class="{ on: panel === 'update' }" @click="panel = 'update'">Update apps</button>
+          <button :class="{ on: panel === 'check' }" @click="panel = 'check'">Check</button>
         </div>
-        <div class="copyrow">
-          <button class="btn sm" :disabled="making" @click="makeShareLink">{{ making ? 'Creating…' : 'Create a share link for this post' }}</button>
-          <button v-if="tgReady" class="btn sm ghost" :disabled="!!sync?.running || dirty" @click="refreshTelegram">{{ sync?.running ? 'Updating…' : 'Refresh in Telegram' }}</button>
-        </div>
-        <p class="muted small">Share links made here stay in sync: saving the post updates them and gives each a new <code>?v=</code> version.</p>
 
-        <div v-if="links.length" class="linked">
-          <div class="small muted">Share links for this post</div>
-          <div v-for="l in links" :key="l.slug" class="linkedrow small">
-            <NuxtLink :to="`/links/${l.slug}`"><code>/s/{{ l.slug }}</code></NuxtLink>
-            <span class="pill">{{ l.syncWithPost ? 'synced' : 'own preview' }}</span>
-            <span class="grow" />
-            <code class="muted">v{{ l.version }}</code>
-            <button class="linkbtn" @click="copyText(shareUrl(l))">{{ copiedText === shareUrl(l) ? 'copied ✓' : 'copy newest' }}</button>
+        <div v-show="panel === 'send'" class="panel-body">
+          <div class="step" style="padding-top:0">
+            <h3>Short links for this post</h3>
+            <div class="copyrow">
+              <button class="btn sm" :disabled="making" @click="makeShareLink">{{ making ? 'Creating…' : 'Make a short link' }}</button>
+              <a class="btn sm ghost" :href="`https://t.me/share/url?url=${encodeURIComponent(latestUrl)}`" target="_blank" rel="noopener">Open Telegram</a>
+            </div>
+            <div v-if="links.length" class="linked">
+              <div v-for="l in links" :key="l.slug" class="linkedrow small">
+                <NuxtLink :to="`/links/${l.slug}`"><code>/s/{{ l.slug }}</code></NuxtLink>
+                <span class="pill">{{ l.syncWithPost ? 'follows this post' : 'own preview' }}</span>
+                <span class="grow" />
+                <button class="linkbtn" @click="copyText(shareUrl(l))">{{ copiedText === shareUrl(l) ? 'copied' : 'copy newest' }}</button>
+              </div>
+            </div>
+            <p class="muted small">Short links that follow this post get its new preview, and a new <code>?v=</code>, every time you publish.</p>
+          </div>
+          <TelegramSend
+            ref="sender" v-model:options="sendOpts" v-model:template="sendTemplate"
+            :owner="`post:${slug}`" :latest-url="latestUrl" :account="tgReady" :bot="tgBot" :dirty="dirty" :title="draft.title" :description="draft.excerpt"
+          />
+        </div>
+
+        <div v-show="panel === 'update'" class="panel-body">
+          <label v-if="tgReady || tgBot || fbReady" class="check" style="margin:0 0 12px"><input v-model="autoRefresh" type="checkbox" /> <span>Update apps automatically each time I publish</span></label>
+          <div class="seg sm" style="margin-bottom:12px">
+            <button v-for="a in PREVIEW_APPS" :key="a.id" :class="{ on: app === a.id }" @click="app = a.id">{{ a.label }}</button>
+          </div>
+          <div v-show="app === 'telegram'">
+            <h2>Update in Telegram</h2>
+            <template v-if="tgReady">
+              <p class="muted small">Refreshes this post and its short links through @WebpageBot, then checks what Telegram shows.</p>
+              <button class="btn sm primary" :disabled="!!sync?.running || dirty" @click="refreshTelegram">{{ sync?.running ? 'Updating…' : 'Refresh in Telegram' }}</button>
+            </template>
+            <p v-else class="muted small">Share the newest link (each publish makes one), or send the link to <a href="https://t.me/WebpageBot" target="_blank" rel="noopener">@WebpageBot</a>. Connect a Telegram account (see the README) to refresh from here.</p>
+            <TelegramSync ref="sync" :theme="theme" />
+          </div>
+          <div v-show="app === 'facebook' || app === 'messenger'">
+            <FacebookPanel
+              ref="fbPanel" :primary-url="latestUrl" :urls="affectedUrls" :owner="`post:${slug}`" :template="sendTemplate"
+              :dirty="dirty" :connected="fbReady" :page-connected="fbPage" :app-id="fbAppId" :theme="theme" :title="draft.title" :description="draft.excerpt"
+            />
+          </div>
+          <div v-show="app === 'whatsapp'">
+            <WhatsAppPanel
+              :primary-url="latestUrl" :image="view.image" :text="mockPlain" :has-override-image="!!draft.platforms.whatsapp?.image"
+              @use-image="useWhatsAppImage" @image-bytes="waImageBytes = $event"
+            />
           </div>
         </div>
 
-        <TelegramSync ref="sync" :theme="theme" />
+        <div v-show="panel === 'check'" class="panel-body">
+          <AppsCheck :url="latestUrl" />
+        </div>
       </div>
-      <div class="card">
-        <AppsCheck :url="latestUrl" />
+    </aside>
+
+    <div class="savebar" :class="{ idle: !dirty && !saving && !notice && !error }">
+      <div class="msg" aria-live="polite">
+        <span v-if="error" class="error">{{ error }}</span>
+        <span v-else-if="notice">{{ notice }}</span>
+        <span v-else-if="notice2 && dirty">{{ notice2 }}</span>
+        <span v-else-if="dirty" class="quiet">Unpublished changes</span>
+        <span v-else class="quiet">Everything is published.</span>
       </div>
-    </section>
+      <button class="btn ghost" :disabled="!dirty || saving" @click="fill(post)">Discard</button>
+      <button class="btn primary" :disabled="!dirty || saving" @click="save">{{ saving ? 'Publishing…' : 'Publish' }}</button>
+    </div>
   </div>
 </template>

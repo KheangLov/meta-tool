@@ -53,6 +53,12 @@ Telegram only applies these to a message that is actually sent, so the tool can 
 
 A bot can't post to Saved Messages, and it can only message a person who has started it. Use *My account* for those.
 
+## Using it on phone, tablet and desktop
+
+- **Desktop:** the form is on the left and the preview stage stays in view on the right. Below the preview, the **Message**, **Update apps** and **Check** tabs hold the sending and checking tools. **Publish** sits at the bottom of the form.
+- **Phones and tablets:** a tab bar at the bottom switches between Links, Posts, Test kit and Settings. In an editor, the **Edit / Preview / Share** switch shows one part at a time, and the **Publish** bar appears as soon as you change something.
+- **Settings** holds the admin token, the list of connections, and the GitHub connection check. The header badge shows the publishing state (*Publishing on*, *N unpublished*, *Not publishing*) and opens Settings.
+
 ## How data is stored (no database)
 
 | What | Where |
