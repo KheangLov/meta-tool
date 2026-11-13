@@ -319,7 +319,7 @@ fieldset.plain:disabled .input, fieldset.plain:disabled .seg, fieldset.plain:dis
 
 /* ---------- phones ---------- */
 @media (max-width: 720px) {
-  :root { --head-h: 54px; --tabbar-h: 76px; font-size: 15px; }
+  :root { --head-h: 54px; --tabbar-h: 64px; font-size: 15px; }
   .input, select.input, textarea.input { font-size: 16px; } /* no iOS zoom on focus */
   .topbar { padding: 0 14px; gap: 10px; }
   .brand-name { display: none; }

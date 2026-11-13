@@ -56,7 +56,7 @@ A bot can't post to Saved Messages, and it can only message a person who has sta
 ## Using it on phone, tablet and desktop
 
 - **Desktop:** the form is on the left and the preview stage stays in view on the right. Below the preview, the **Message**, **Update apps** and **Check** tabs hold the sending and checking tools. **Publish** sits at the bottom of the form.
-- **Phones and tablets:** a floating, frosted tab bar at the bottom (the active highlight slides between tabs, iOS-style) switches between Links, Posts, Test kit and Settings. In an editor, the **Edit / Preview / Share** switch shows one part at a time, and the **Publish** bar appears as soon as you change something.
+- **Phones and tablets:** a compact floating, frosted tab bar at the bottom (the active pill springs to the tab you tap, and you can drag it along the bar, iOS-style) switches between Links, Posts, Test kit and Settings. In an editor, the **Edit / Preview / Share** switch shows one part at a time, and the **Publish** bar appears as soon as you change something.
 - **Settings** holds the admin token, the list of connections, and the GitHub connection check. The header badge shows the publishing state (*Publishing on*, *N unpublished*, *Not publishing*) and opens Settings.
 
 ## Look and dark mode
